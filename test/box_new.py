@@ -4,10 +4,10 @@ import user_lib.mssql as mssql
 import pandas as pd
 import matplotlib.pyplot as plt
 
-host='ntgprodbi08'
-user='tableau001'
-db='Maybelline_TAB'
-pwd='t32i*7)k&d'
+host=''
+user=''
+db=''
+pwd=''
 
 print('''
 [登录设置]

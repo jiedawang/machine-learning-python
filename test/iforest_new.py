@@ -4,10 +4,10 @@ import pandas as pd
 import user_lib.iforest as iforest
 import datetime as dt
 
-host='ntgprodbi08'
-user='tableau001'
-db='Maybelline_PROD'
-pwd='t32i*7)k&d'
+host=''
+user=''
+db=''
+pwd=''
 
 print('''
 [登录设置]
