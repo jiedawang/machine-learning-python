@@ -2,6 +2,7 @@
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
+import time
 
 class DecisionTree:
   
@@ -27,16 +28,16 @@ class DecisionTree:
     #表示随机变量不确定性的度量，范围0~log2(n)，数值越大不确定性越大,n为离散值种类数
     #0log0=0 ；当对数的底为2时，熵的单位为bit；为e时，单位为nat。
     def getEntropy(self,info,continuous=False,value=0):
+        n=len(info)
         if continuous==True:
             #计算值的概率分布
-            p_l=len(info[info<=value])/len(info)
-            p_r=len(info[info>value])/len(info)
+            p=len(info[info<=value])/n
             #计算信息熵
-            etp=-p_l*np.log2(p_l)-p_r*np.log2(p_r)
+            etp=-p*np.log2(p)-(1-p)*np.log2(1-p)
         else:
             #计算值的概率分布
             values_count=info.groupby(info).count()
-            p=values_count/len(info)
+            p=values_count/n
             #计算信息熵
             etp=-np.sum(p*np.log2(p))
         return etp
@@ -44,22 +45,20 @@ class DecisionTree:
     #条件熵
     #在x中第i个随机变量确定的情况下，随机变量y的不确定性
     #即按第i个特征划分数据后的信息熵
-    def getCondiEntropy(self,data,i,continuous=False,value=0):
-        n=len(data)
-        x=data.iloc[:,i]
-        y=data.iloc[:,len(data.columns)-1]
+    def getCondiEntropy(self,x,y,continuous=False,value=0):
+        n=len(x)
         #计算条件熵
         con_ent=0.0
         if continuous==True:
             boolIdx=(x<=value)
-            p=len(boolIdx)/n
+            p=len(x[boolIdx])/n
             con_ent+=p*self.getEntropy(y[boolIdx])
             con_ent+=(1-p)*self.getEntropy(y[~boolIdx])
         else:
             values=x.drop_duplicates().tolist()
             for i in range(len(values)):
                 boolIdx=(x==values[i])
-                p=len(boolIdx)/n
+                p=len(x[boolIdx])/n
                 con_ent+=p*self.getEntropy(y[boolIdx])
         '''(另一种写法)
         #如果x是连续值，将x转化为关于分裂点的布尔索引
@@ -87,14 +86,14 @@ class DecisionTree:
     #用于衡量经过某特征的划分后分类的不确定性降低了多少
     def chooseFeatureByID3(self,data):
         #计算分割前的信息熵
-        y_col=len(data.columns)-1
-        baseEntropy=self.getEntropy(data.iloc[:,y_col])
+        y=data.iloc[:,len(data.columns)-1]
+        baseEntropy=self.getEntropy(y)
         #初始化变量
         bestInfGain=0.0
         bestFeatureIdx=-1
         #逐个计算按不同特征分割后的信息增益并选出增益最大的一个特征
         for i in range(len(data.columns)-1):
-            infGain=baseEntropy-self.getCondiEntropy(data,i)
+            infGain=baseEntropy-self.getCondiEntropy(data.iloc[:,i],y)
             if infGain>bestInfGain:
                 bestInfGain=infGain
                 bestFeatureIdx=i
@@ -107,28 +106,29 @@ class DecisionTree:
     #C4.5增加了对连续数据的处理，连续特征根据信息增益选择最佳分裂点转换为离散值
     def chooseFeatureByC4_5(self,data,continuous):
         #计算分割前的信息熵
-        y_col=len(data.columns)-1
-        baseEntropy=self.getEntropy(data.iloc[:,y_col])
+        y=data.iloc[:,len(data.columns)-1]
+        baseEntropy=self.getEntropy(y)
         #初始化变量
         bestInfGainRatio=0.0
         bestFeatureIdx=-1
         bestSplitValue=0.0
         #逐个计算按不同特征分割后的信息增益并选出增益最大的一个特征
         for i in range(len(data.columns)-1):
+            x=data.iloc[:,i]
             #是否为连续特征
             if continuous[i]==True:
-                splitValue,n=self.chooseSplitValue(data,i)
-                splitFeatEntropy=self.getEntropy(data.iloc[:,i],True,splitValue)
+                splitValue,n=self.chooseSplitValue(x,y)
+                splitFeatEntropy=self.getEntropy(x,True,splitValue)
                 infGain=baseEntropy\
-                    -self.getCondiEntropy(data,i,True,splitValue)\
+                    -self.getCondiEntropy(x,y,True,splitValue)\
                     -np.log2(n-1)/len(data)
             else:
                 splitValue=0.0
-                splitFeatEntropy=self.getEntropy(data.iloc[:,i])
-                infGain=baseEntropy-self.getCondiEntropy(data,i)
-            infGainRatio=infGain/splitFeatEntropy
+                splitFeatEntropy=self.getEntropy(x)
+                infGain=baseEntropy-self.getCondiEntropy(x,y)
             if splitFeatEntropy==0:
                 continue
+            infGainRatio=infGain/splitFeatEntropy
             if infGainRatio>bestInfGainRatio:
                 bestInfGainRatio=infGainRatio
                 bestFeatureIdx=i
@@ -136,32 +136,56 @@ class DecisionTree:
         return bestFeatureIdx,bestSplitValue
     
     #最优分裂点选择
-    def chooseSplitValue(self,data,i):
+    def chooseSplitValue(self,x,y):
         #计算分裂前的信息熵
-        y_col=len(data.columns)-1
-        baseEntropy=self.getEntropy(data.iloc[:,y_col])
-        #排序
-        sorted_series=data.iloc[:,i].drop_duplicates().sort_values().tolist()
+        baseEntropy=self.getEntropy(y)
+        #需要尝试的分裂点
+        values=self.screeningSplitValues(x,y)
         #初始化变量
         bestInfGain=0.0
-        bestSplitValue=sorted_series[0]
+        bestSplitValue=values[0]
         #逐个计算所有可能分裂点的条件熵
-        for j in range(len(sorted_series)-1):
-            split_value=sorted_series[j]
-            infGain=baseEntropy-self.getCondiEntropy(data,i,True,split_value)
+        for j in range(len(values)-1):
+            split_value=values[j]
+            infGain=baseEntropy-self.getCondiEntropy(x,y,True,split_value)
             if infGain>bestInfGain:
                 bestInfGain=infGain
                 bestSplitValue=split_value
-        return bestSplitValue,len(sorted_series)
+        return bestSplitValue,len(values)
+    
+    #筛选分裂点，取分类结果有变化的点
+    def screeningSplitValues(self,x,y):
+        #重整源数据
+        data=pd.DataFrame()
+        data['x'],data['y']=x,y
+        data=data.sort_values('x')
+        data.index=np.linspace(0,len(data)-1,len(data)).astype(np.int64)
+        #提取首末行
+        head,foot=data.iloc[0:1,:],data.iloc[len(data)-1:,:]
+        #复制一份作为后续数
+        subsequent=data.copy()
+        subsequent.index=subsequent.index-1
+        subsequent.columns=subsequent.columns+'_next'  
+        #每个数与自己的后续数匹配并找出变化位置
+        data=data.join(subsequent,how='inner')   
+        change_points=data[data['y']!=data['y_next']]  
+        #提取变化位置前后的点 
+        change_f=change_points.iloc[:,0:2]
+        change_b=change_points.iloc[:,2:]
+        change_b.columns=change_f.columns
+        #将所有的检查点整合并去重排序
+        check_points=pd.concat([head,change_f,change_b,foot])
+        check_points=check_points.drop_duplicates().sort_index().iloc[:,0].tolist()
+        return check_points
     
     #选择出现频数最高的类作为叶节点判定的类
-    def chooseClass(self,data):
-        y=data.iloc[:,len(data.columns)-1]
+    def chooseClass(self,y):
         values=y.groupby(y).count()
         return values[values==values.max()].index.values[0]
     
     #生成树，结果以字典形式返回
     def createTree(self,data,model_type='C4.5',h_max=10,h=1):
+        start = time.clock()
         type_list=('ID3','C4.5','CART')
         if model_type not in type_list:
             print('model_type should in:')
@@ -186,10 +210,10 @@ class DecisionTree:
             return y[y.index[0]]
         #可用特征不足，返回出现频数最高的类名
         if len(data.columns)==1:
-            return self.chooseClass(data)
+            return self.chooseClass(y)
         #超出高度上限，返回出现频数最高的类名
         if h>h_max:
-            return self.chooseClass(data)
+            return self.chooseClass(y)
         #选择最优特征进行分割，并以字典形式记录结果
         #格式：{特征名：{特征值（中间结点）：{...},特征值（叶结点）：类名}}
         if model_type=='ID3':
@@ -199,7 +223,7 @@ class DecisionTree:
             bestFeatureIdx,bestSplitValue=self.chooseFeatureByC4_5(data,continuous)
         #特征值统一，无法继续分割
         if bestFeatureIdx==-1:
-            return self.chooseClass(data)
+            return self.chooseClass(y)
         #获取最优划分特征的相关信息
         bestFeatureLabel=data.columns[bestFeatureIdx]
         bestFeatureContinuous=continuous[bestFeatureIdx]
@@ -214,10 +238,14 @@ class DecisionTree:
             deciTree[bestFeatureLabel][split_values[i]]=self.createTree(
                     split_set[i].drop(bestFeatureLabel,axis=1),
                     model_type,h_max,h+1)
+        end = time.clock()
+        if h==1:
+            print('\ntime used for trainning:%f'%(end-start))
         return deciTree
     
     #预测
     def predict(self,tree,x,fill_empty=True,first=True):
+        start = time.clock()
         #定义存放分类结果的series
         p_y=pd.Series(np.full(len(x),''),index=x.index,name='classify')
         #获取首个结点在dict中对应的key，即最优划分特征
@@ -251,6 +279,9 @@ class DecisionTree:
             nullIdx=(p_y=='')
             n=p_y[nullIdx].count()
             p_y.loc[nullIdx]=p_y[~nullIdx].sample(n=n).tolist()
+        end = time.clock()
+        if first==True:
+            print('\ntime used for predict:%f'%(end-start))
         return p_y
     
     #评估
