@@ -35,46 +35,61 @@ dtModel0=dt.DecisionTree()
 deciTree0=dtModel0.fit(X,y,model_type='id3',output=True)
 
 dtModel0.plot()
-#dtModel0.print_nodes()
+dtModel0.print_nodes()
 
 test=data.drop('decition',axis=1)
 result=dtModel0.predict(test)
 
+'''
+continuous=dtModel0.check_input(X,y,'cart')
+X_,mapping_X=dtModel0.format_X(X,continuous)
+y_,mapping_y=dtModel0.format_y(y)
+
+combineLeft=[0.0]
+dt.con_gini(X_.iloc[:,0].values,y_,False,combineLeft)
+
+splited_X,splited_y,split_values=dtModel0.split(X_,y_,2,
+                                    continuous[2],
+                                    None)
+
+x_value=X_.iloc[:,0].astype('int').values
+y_value=y_.astype('int').values
+
+start=time.clock()
+result=dt.combine_enum([i for i in range(4)])
+print('\ntime used: %f'%(time.clock()-start))
+
+result2=[]
+for i in range(len(result)):
+    result2.append(dt.combine_take([i for i in range(5)],result[i]))
+'''   
 '''
 #常规数据集
 f = open('D:\\训练数据集\\used\\小麦种子数据集\\data.txt')
 buf = pd.read_table(f,header=None,delim_whitespace=True)
 buf.columns=['区域','周长','压实度','籽粒长度','籽粒宽度','不对称系数','籽粒腹沟长度','类']
 describe=buf.describe()
+dp_tool=dp.DataPreprocessing()
 #分割训练集和测试集
-train=buf.sample(frac=0.8,random_state=1)
-test=buf[~buf.index.isin(train.index)]
-X=train.iloc[:,:(len(train.columns)-1)].round(4)
-y=train.iloc[:,len(train.columns)-1]
-test_X=test.iloc[:,:(len(test.columns)-1)].round(4)
-test_y=test.iloc[:,(len(test.columns)-1)]
+X,y,test_X,test_y=dp_tool.split_train_test(buf)
+X=X.round(4)
+#生成离散化区间
+rg=dp_tool.discret_reference(X,3)
+#进行特征离散化
+X_=dp_tool.discret(X,rg,str_label=True)
+test_X_=dp_tool.discret(test_X,rg,str_label=True)
 
 #ID3(没有处理连续特征的能力，需要预处理)
-
-#生成离散化区间
-dp_tool=dp.DataPreprocessing()
-rg=dp_tool.discret_reference(train,3)
-#进行特征离散化
-X_=dp_tool.discret(X,rg,return_label=True,open_bounds=True)
 #训练决策树
 dtModel1=dt.DecisionTree()
 deciTree1=dtModel1.fit(X_,y,model_type='id3',output=True)
 dtModel1.plot()
-#dtModel1.plot(feature_label=False,value_label=False,class_label=False)
+#dtModel1.plot(start_id=4,print_loc=True)
 #dtModel1.print_nodes()
 #预测
-test_X_=dp_tool.discret(test_X,rg,return_label=True,open_bounds=True)
 result1=dtModel1.predict(test_X_)
 score1=dtModel1.assess(test_y,result1)
-print('\nID3 test score: %f'%score2)
-result2=dtModel1.predict(test_X_,fill_empty=False)
-score2=dtModel1.assess(test_y,result2)
-print('\nID3 test score(ignore empty): %f'%score2)
+print('\nID3 test score: %f'%score1)
 
 #存储和读取测试
 dtModel1.save_tree('D:\\Model\\deciTree.txt')
@@ -87,12 +102,36 @@ deciTree2=dtModel2.fit(X,y,model_type='c4.5',output=True)
 dtModel2.plot()
 #dtModel2.print_nodes()
 #预测
-result1=dtModel2.predict(test_X)
-score1=dtModel2.assess(test_y,result1)
-print('\nC4.5 test score: %f'%score1)
-result2=dtModel2.predict(test_X,fill_empty=False)
+result2,paths=dtModel2.predict(test_X,return_paths=True)
 score2=dtModel2.assess(test_y,result2)
-print('\nC4.5 test score(ignore empty): %f'%score2)
+print('\nC4.5 test score: %f'%score2)
+
+#dtModel2.decition_path(X.iloc[0,:])
+
+#CART分类
+#连续特征
+#训练决策树
+dtModel3=dt.DecisionTree()
+deciTree3=dtModel3.fit(X,y,model_type='cart',output=True)
+dtModel3.plot()
+#dtModel3.print_nodes()
+#预测
+result3=dtModel3.predict(test_X)
+score3=dtModel3.assess(test_y,result3)
+print('\nCART test score: %f'%score3)
+
+#离散特征
+#训练决策树
+dtModel3_2=dt.DecisionTree()
+deciTree3_2=dtModel3_2.fit(X_,y,model_type='cart',output=True)
+dtModel3_2.plot()
+#dtModel3_2.print_nodes()
+#预测
+result3_2=dtModel3_2.predict(test_X_)
+score3_2=dtModel3_2.assess(test_y,result3_2)
+print('\nCART test score: %f'%score3_2)
+
+#dtModel3_2.decition_path(X_.iloc[0,:])
 
 #与sklearn对照
 from sklearn import tree

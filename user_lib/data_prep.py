@@ -5,6 +5,14 @@ import numpy as np
 #数据预处理
 class DataPreprocessing:
     
+    #拆分训练集和测试集
+    def split_train_test(self,data,frac=0.8,random_state=None):
+        train=data.sample(frac=frac,random_state=random_state)
+        test=data[~data.index.isin(train.index)]
+        train_X,train_y=train.iloc[:,:-1],train.iloc[:,-1]
+        test_X,test_y=test.iloc[:,:-1],test.iloc[:,-1]
+        return train_X,train_y,test_X,test_y
+    
     #常数列补齐： x首列填充1,即常数位忽略x的影响
     def fill_x0(x_):
         #将Series转化为DataFrame
@@ -26,37 +34,38 @@ class DataPreprocessing:
             result[col_name]=ovr.astype('int')
         return result
     
-    #特征离散化
-    def discret_reference(self,x,n,mode='interval'):
-        mode_list=('interval','frequency','chi-square','info-gain')
-        if mode not in mode_list:
-            print('mode should in:')
-            print(mode_list)
-            raise TypeError('Unknown mode')
-        if mode=='interval':
-            #计算区间范围
-            drange=[]
-            for i in range(len(x.columns)):
-                drange.append(np.linspace(x.iloc[:,i].min(),x.iloc[:,i].max(),n+1))
-            drange=pd.DataFrame(drange,index=x.columns)
-            return drange.T
-        
-    def discret(self,x,drange,return_label=True,open_bounds=True):
+    #特征离散化(等距分)
+    #计算参考标准
+    def discret_reference(self,X,n,cols=None):
+        if cols==None:
+            cols=X.columns
+        drange=[]
+        for col in cols:
+            x=X.loc[:,col]
+            drange.append(np.linspace(x.min(),x.max(),n+1))
+        drange=pd.DataFrame(drange,index=cols)
+        return drange.T
+    #根据参考标准离散化   
+    def discret(self,X,drange,return_label=True,str_label=False,open_bounds=True):
         #按区间划分数据
-        result=x.copy()
-        for i in range(len(x.columns)):
-            x_i=x.iloc[:,i]
-            rg=drange.iloc[:,i].tolist()
+        result=X.copy()
+        for col in drange.columns:
+            x=X.loc[:,col]
+            rg=drange.loc[:,col].tolist()
             if return_label==True:
-                result.iloc[:,i]=pd.cut(x_i,bins=rg)
+                if str_label==True:
+                    result.loc[:,col]=pd.cut(x,bins=rg).astype('str')
+                else:
+                    result.loc[:,col]=pd.cut(x,bins=rg)
             else:
-                result.iloc[:,i]=pd.cut(x_i,bins=rg,labels=False)
-            temp=result.iloc[:,i]
+                result.loc[:,col]=pd.cut(x,bins=rg,labels=False)
+            temp=result.loc[:,col]
+            temp=temp[~temp.isnull()]
             if open_bounds==True:
-                result.iloc[:,i][x_i<=rg[0]]=temp[~temp.isnull()].min()
-                result.iloc[:,i][x_i>rg[len(rg)-1]]=temp[~temp.isnull()].max()
+                result.loc[x<=rg[0],col]=temp.min()
+                result.loc[x>rg[len(rg)-1],col]=temp.max()
             else:
-                result.iloc[:,i][x_i==rg[0]]=temp[~temp.isnull()].min()
+                result.loc[x==rg[0],col]=temp.min()
         return result
         
     
