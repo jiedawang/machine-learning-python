@@ -40,30 +40,6 @@ dtModel0.print_nodes()
 test=data.drop('decition',axis=1)
 result=dtModel0.predict(test)
 
-'''
-continuous=dtModel0.check_input(X,y,'cart')
-X_,mapping_X=dtModel0.format_X(X,continuous)
-y_,mapping_y=dtModel0.format_y(y)
-
-combineLeft=[0.0]
-dt.con_gini(X_.iloc[:,0].values,y_,False,combineLeft)
-
-splited_X,splited_y,split_values=dtModel0.split(X_,y_,2,
-                                    continuous[2],
-                                    None)
-
-x_value=X_.iloc[:,0].astype('int').values
-y_value=y_.astype('int').values
-
-start=time.clock()
-result=dt.combine_enum([i for i in range(4)])
-print('\ntime used: %f'%(time.clock()-start))
-
-result2=[]
-for i in range(len(result)):
-    result2.append(dt.combine_take([i for i in range(5)],result[i]))
-'''   
-'''
 #常规数据集
 f = open('D:\\训练数据集\\used\\小麦种子数据集\\data.txt')
 buf = pd.read_table(f,header=None,delim_whitespace=True)
@@ -153,4 +129,3 @@ sk_dtModel = joblib.load('D:\\Model\\deciTree2.pkl')
 
 result = sk_dtModel.predict(test_X)
 print('\nsklearn test score:%f'%sk_dtModel.score(test_X,test_y))
-'''
