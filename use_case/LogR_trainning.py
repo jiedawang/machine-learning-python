@@ -7,7 +7,7 @@ import user_lib.data_prep as dp
 
 #简单数据集，分类结果的图像展示
 #注：x取值范围过大可能会导致simgond计算超精度上限，视情况进行缩放
-f = open('D:\\训练数据集\\used\\simple_data\\data1.txt')
+f = open('D:\\Training Data\\used\\simple_data1.txt')
 buf = pd.read_table(f,header=None,sep=',')
 buf.columns=['x1','x2','y']
 describe=buf.describe()
@@ -41,7 +41,7 @@ plt.legend(labels = ['bound','y=1', 'y=0'],loc='best')
 plt.show()
 
 #非线性
-f = open('D:\\训练数据集\\used\\simple_data\\data2.txt')
+f = open('D:\\Training Data\\used\\simple_data2.txt')
 buf = pd.read_table(f,header=None,sep=',')
 buf.columns=['x1','x2','y']
 describe=buf.describe()
@@ -85,7 +85,7 @@ plt.legend(labels = ['y=1', 'y=0'],loc='best')
 plt.show()
 
 #钞票数据集：类1为假钞，0为真钞
-f = open('D:\\训练数据集\\used\\钞票数据集\\data.txt')
+f = open('D:\\Training Data\\used\\bill.txt')
 buf = pd.read_table(f,header=None,sep=',')
 buf.columns=['小波变换图像','小波偏斜变换图像','小波峰度变换图像','图像熵','类']
 describe=buf.describe()
@@ -165,7 +165,8 @@ plt.legend(labels = ['train', 'test'],loc='best')
 
 #多分类
 #one vs rest
-f = open('D:\\训练数据集\\used\\小麦种子数据集\\data.txt')
+#小麦种子数据集
+f = open('D:\\Training Data\\used\\wheat_seed.txt')
 buf = pd.read_table(f,header=None,delim_whitespace=True)
 buf.columns=['区域','周长','压实度','籽粒长度','籽粒宽度','不对称系数','籽粒腹沟长度','类']
 describe=buf.describe()

@@ -24,7 +24,7 @@ B：1000（Bk-0.63）^ 2，其中 Bk 指代城镇中黑人的比例。
 LSTAT：人口中地位低下者的比例。
 MEDV：自住房的平均房价，以千美元计。
 '''
-f = open('D:\\训练数据集\\used\\波士顿房价数据集\\data.txt')
+f = open('D:\\Training Data\\used\\boston_house_price.txt')
 buf = pd.read_table(f,header=None,delim_whitespace=True)
 buf.columns=['CRIM','ZN','INDUS','CHAS','NOX','RM','AGE','DIS','RAD',
                      'TAX','PTRATIO','B','LSTAT','MEDV']
@@ -99,7 +99,7 @@ lrModel.intercept_
 #预测
 test3_fx=lrModel.predict(test_x)
 test3_score=lrModel.score(test_x, test_y)
-print('\n<与sklearn对比>')
+print('\n与sklearn对比')
 print('train score：%f'%train3_score)
 print('test score：%f'%test3_score)
 
