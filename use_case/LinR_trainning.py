@@ -24,7 +24,7 @@ B：1000（Bk-0.63）^ 2，其中 Bk 指代城镇中黑人的比例。
 LSTAT：人口中地位低下者的比例。
 MEDV：自住房的平均房价，以千美元计。
 '''
-f = open('D:\\Training Data\\used\\boston_house_price.txt')
+f = open('D:\\training_data\\used\\boston_house_price.txt')
 buf = pd.read_table(f,header=None,delim_whitespace=True)
 buf.columns=['CRIM','ZN','INDUS','CHAS','NOX','RM','AGE','DIS','RAD',
                      'TAX','PTRATIO','B','LSTAT','MEDV']
