@@ -30,127 +30,85 @@ buf.columns=['CRIM','ZN','INDUS','CHAS','NOX','RM','AGE','DIS','RAD',
                      'TAX','PTRATIO','B','LSTAT','MEDV']
 describe=buf.describe()
 
-dp_tool=dp.DataPreprocessing()
-
 #拆分训练集和测试集
-train=buf.sample(frac=0.8,random_state=1)
-test=buf[~buf.index.isin(train.index)]
+X,y,test_X,test_y=dp.split_train_test(buf)
+
+#特征缩放
+ref=dp.scaler_reference(X)
+X_=dp.minmax_scaler(X,ref)
+test_X_=dp.minmax_scaler(test_X,ref)
 
 #多元线性回归
-#创建模型
-linear1=rg.LinearRegression()
-linear2=rg.LinearRegression()
+#分别使用两种方法拟合模型
 
-#拆分训练集的输入变量和输出变量
-x=train.iloc[:,:13]
-y=train.iloc[:,13]
+print('\n\n<拟合时间对比>')
+#1：正规方程法
+print('\n正规方程法：')
+linear2=rg.LinearRegression(fit_mode='ne')
+theta_by_ne=linear2.fit(X_,y,show_time=True,output=True)
 
-#分别使用两种算法求解模型
-
-#1：梯度下降法
-#特征缩放
-dp_tool.scaler_reference(x)
-x=dp_tool.minmax_scaler(x)
-#学习率a，最大迭代次数iter_max,代价变化停止阀值stop_threshold
-#模型参数个数k,梯度下降参数配置init_dir,梯度下降类型gd_type
-iter_max=1000
-k=len(x.columns)+1
-init_dir={'a':3e-1}
-gd_type='SGD'
-#计算结果
-theta_by_gd=linear1.fit_by_gd(x,y,init_dir,iter_max,gd_type)
+#2：梯度下降法
+print('\n梯度下降法：')
+#最大迭代次数,学习率
+iter_max,a=1000,0.1
+linear1=rg.LinearRegression(fit_mode='sgd',a=a,iter_max=iter_max)
+#拟合
+theta_by_gd=linear1.fit(X_,y,show_time=True,output=True)
 theta_h=linear1.theta_h
 cost_h=linear1.cost_h
 
-print('\n\n<cost下降过程>')
-cost_h.plot()
-plt.show()
+#cost,theta变化曲线
+linear1.plot_change_h()
 
-#2：正规方程法
-theta_by_ne=linear2.fit_by_ne(x,y)
-
-#预测测试
-test_x=test.iloc[:,:13]
-test_y=test.iloc[:,13]
-test_x=dp_tool.minmax_scaler(test_x)
-test1_fx,test1_score,test1_a_result=linear1.predict_test(test_x,test_y)
-test2_fx,test2_score,test2_a_result=linear2.predict_test(test_x,test_y)
+#预测
+result1=linear1.predict(test_X_)
+score1=linear1.assess(test_y,result1)
+result2=linear2.predict(test_X_)
+score2=linear2.assess(test_y,result2)
 
 print('\n\n<拟合结果对比>')
-print('\n梯度下降法：')
-print('train score：%f'%linear1.score)
-print('test score：%f'%test1_score)
 print('\n正规方程法：')
 print('train score：%f'%linear2.score)
-print('test score：%f'%test2_score)
+print('test score：%f'%score2)
+print('\n梯度下降法：')
+print('train score：%f'%linear1.score)
+print('test score：%f'%score1)
 
 #与sklearn对照
 from sklearn.linear_model import LinearRegression
 #建模
 lrModel = LinearRegression()
 #训练模型
-lrModel.fit(x, y)
+lrModel.fit(X, y)
 #评分
-train3_score=lrModel.score(x, y)
+train_score3=lrModel.score(X, y)
 #查看参数
 lrModel.coef_
 #查看截距
 lrModel.intercept_
 #预测
-test3_fx=lrModel.predict(test_x)
-test3_score=lrModel.score(test_x, test_y)
+result3=lrModel.predict(test_X)
+test_score3=lrModel.score(test_X, test_y)
 print('\n与sklearn对比')
-print('train score：%f'%train3_score)
-print('test score：%f'%test3_score)
+print('train score：%f'%train_score3)
+print('test score：%f'%test_score3)
 
-#梯度下降优化算法测试
-#(在线性回归中无法表现出相应的优势，仅作运行测试)
-linear3=rg.LinearRegression()
-#设置最大迭代次数,代价变化的停止阀值
-iter_max=1000
-k=len(x.columns)+1
-gd_type_list=['SGD','Momentum','Nesterov',
-              'Adagrad','RMSProp','Adadelta',
-              'Adam','Adamax','Nadam']
-init_dir_list=[{'a':3e-1},{'a':3e-1,'p':0.9,'k':k},{'a':3e-1,'p':0.9,'k':k},
-               {'a':1,'e':1e-8,'k':k},{'a':3e-1,'p':0.9,'e':1e-8,'k':k},
-               {'p':0.9,'e':1e-2,'k':k},
-               {'a':3,'u':0.9,'v':0.999,'e':1e-8,'k':k},
-               {'a':3,'u':0.9,'v':0.999,'e':1e-8,'k':k},
-               {'a':3e-1,'u':0.9,'v':0.999,'e':1e-8,'k':k}]
-cost_cont=pd.DataFrame(np.zeros([iter_max,len(gd_type_list)]),columns=gd_type_list)
-iter_cont=[]
-
-print('\n\n<梯度下降优化算法测试>')
-#计算结果
-for i in range(len(gd_type_list)):
-    print('正在执行：%s'%gd_type_list[i])
-    start = time.clock()
-    linear3.fit_by_gd(x,y,init_dir_list[i],iter_max,gd_type_list[i],feedback=False)
-    end = time.clock()
-    cost_cont[gd_type_list[i]]=linear3.cost_h
-    iter_cont.append((linear3.iter_num,end-start))
-iter_cont=pd.DataFrame(iter_cont,index=gd_type_list,columns=['iter_num','time_cost'])
-cost_cont[cost_cont.index<=100].plot()
-plt.show()
-
-#多项式回归和正则化测试
+#多项式回归和L2正则化测试
 sp_dt=[(1.5,5),(2.4,9),(3.1,30),(4.8,110),(5.2,70),(6.7,220),(8,500)]
 sp_dt=pd.DataFrame(sp_dt,columns=['x','y'])
 
-x=sp_dt['x']
-y=sp_dt['y']
+x2=sp_dt['x']
+y2=sp_dt['y']
 
 #用于描绘结果曲线的点集
-x0=pd.Series(np.linspace(x.min(),x.max(),101),name='x')
+x2_0=pd.Series(np.linspace(x2.min(),x2.max(),101),name='x')
 
 #拟合并绘图
-def fit_test(x,y,x0,h,L2_n=0):
-    lr_temp=rg.LinearRegression()
-    dp_tool=dp.DataPreprocessing()
-    x_h=dp_tool.feature_mapping(x,h)
-    lr_temp.fit_by_ne(x_h,y,L2_n)
-    x0_h=dp_tool.feature_mapping(x0,h)
+def fit_test(x,y,x0,h,L2_n=0.0):
+    lr_temp=rg.LinearRegression(L2_n=L2_n)
+    x_h=dp.feature_mapping(x,h)
+    lr_temp.fit(x_h,y)
+    x0_h=dp.feature_mapping(x0,h)
     y0=lr_temp.predict(x0_h)
     print('\n\n<h=%d,L2_n=%f>'%(h,L2_n))
     print('train score:%f'%(lr_temp.score))
@@ -161,17 +119,17 @@ def fit_test(x,y,x0,h,L2_n=0):
     plt.show()
 
 #求线性解(欠拟合)
-fit_test(x,y,x0,h=1)
+fit_test(x2,y2,x2_0,h=1)
 
 #映射为多项式
 #正常拟合
-fit_test(x,y,x0,h=3)
+fit_test(x2,y2,x2_0,h=3)
 
 #过拟合
-fit_test(x,y,x0,h=6)
+fit_test(x2,y2,x2_0,h=6)
 
 #使用L2正则化避免过拟合
-fit_test(x,y,x0,h=6,L2_n=1)
+fit_test(x2,y2,x2_0,h=6,L2_n=1.0)
 
 
 

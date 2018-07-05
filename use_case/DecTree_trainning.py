@@ -45,15 +45,15 @@ f = open('D:\\training_data\\used\\wheat_seed.txt')
 buf = pd.read_table(f,header=None,delim_whitespace=True)
 buf.columns=['区域','周长','压实度','籽粒长度','籽粒宽度','不对称系数','籽粒腹沟长度','类']
 describe=buf.describe()
-dp_tool=dp.DataPreprocessing()
+
 #分割训练集和测试集
-X1,y1,test_X1,test_y1=dp_tool.split_train_test(buf)
+X1,y1,test_X1,test_y1=dp.split_train_test(buf)
 X1=X1.round(4)
 #生成离散化区间
-rg=dp_tool.discret_reference(X1,3)
+rg=dp.discret_reference(X1,3)
 #进行特征离散化
-X1_=dp_tool.discret(X1,rg,str_label=True)
-test_X1_=dp_tool.discret(test_X1,rg,str_label=True)
+X1_=dp.discret(X1,rg)
+test_X1_=dp.discret(test_X1,rg)
 
 #ID3(没有处理连续特征的能力，需要预处理)
 #训练决策树
@@ -98,7 +98,6 @@ score2_2=dtModel2_2.assess(test_y1,result2_2)
 print('\nC4.5 test score: %f'%score2_2)
 
 #剪枝测试(pep)
-#注：pep剪枝似乎挺容易失败的
 tree2_pruned=dtModel2.pruning(mode='pep',return_tree=True)
 dtModel2.plot(tree=tree2_pruned)
 result2_pruned=dtModel2.predict(X1,tree=tree2_pruned)
@@ -162,7 +161,7 @@ plot_step=0.02
 
 #获取所有特征的两两组合
 column_idx=np.linspace(0,len(X1.columns)-1,len(X1.columns)).astype('int')
-pair_enum=dt.get_combines(column_idx,e_min=2,e_max=2)
+pair_enum=dp.combines_paired(column_idx)
 
 for pairidx,pair in enumerate(pair_enum):
     #if pair!=[0,1]:
@@ -221,9 +220,8 @@ f = open('D:\\training_data\\used\\boston_house_price.txt')
 buf = pd.read_table(f,header=None,delim_whitespace=True)
 buf.columns=['CRIM','ZN','INDUS','CHAS','NOX','RM','AGE','DIS','RAD',
                      'TAX','PTRATIO','B','LSTAT','MEDV']
-dp_tool=dp.DataPreprocessing()
 #分割训练集和测试集
-X2,y2,test_X2,test_y2=dp_tool.split_train_test(buf)
+X2,y2,test_X2,test_y2=dp.split_train_test(buf)
 X2=X2.round(4)
 
 #cart回归树

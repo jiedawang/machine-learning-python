@@ -2,596 +2,788 @@
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
-from user_lib.data_prep import DataPreprocessing
+import user_lib.data_prep as dp
+import user_lib.statistics as stats
+from user_lib.check import check_type,check_limit,check_index_match,check_feats_match
+import time
 
+#线性回归
 class LinearRegression:
+    '''\n  
+    Note: 以展示各个算法的实现为目的
     
-    #线性回归模型：theta0*1+theta1*x1+theta2*x2+...
-    #theta:参数向量,Series类型,theta[i]对应thetai
-    #x:特征矩阵,DataFrame类型,column[i]对应xi，row对应每一条数据记录
-    def model(self,x,theta):
-        #返回矩阵相乘结果
-        return np.dot(x,theta)
+    Parameters
+    ----------
+    fit_mode: 拟合模式，str类型(ne,sgd),
+              'ne'->正规方程法，直接求得最优解，在特征数量很多时速度会很慢
+              'sgd'->随机梯度下降，迭代优化，没有限制但需要选择合适的a和iter_max
+              默认值'ne'
+    a: 迭代优化学习率，float类型(>0.0)，默认值0.001
+    iter_max: 迭代优化迭代次数上限，int类型(>0)，默认值1000
+    mini_batch: 迭代优化每次使用的样本数，int类型(>0)，0为自动选择，默认值0
+    L2_n: L2正则化系数，float类型(>0.0)，默认值为0，
+          该系数在代价中加入了关于模型复杂度的惩罚项，
+          作用是防止过拟合，一般用于非线性模式
+    early_stop: 是否允许超过一定次数迭代后代价没有进一步降低时提前结束训练，
+                bool类型，默认值True
+    ----------
+    '''
     
-    #代价函数,用于衡量拟合的偏差程度       
-    #fx:模型预测值（向量）
-    #y:真实观测值（向量）
-    def cost(self,fx,y):
-        re=fx-y
+    def __init__(self,fit_mode='ne',a=0.001,iter_max=1000,mini_batch=256,
+                 L2_n=0.0,early_stop=True):
+        #校验参数类型和取值
+        #check_type(变量名，变量类型，要求类型)
+        #check_limit(变量名，限制条件，正确取值提示)
+        check_type('fit_mode',type(fit_mode),type(''))
+        check_type('a',type(a),type(0.0))
+        check_type('iter_max',type(iter_max),type(0))
+        check_type('mini_batch',type(mini_batch),type(0))
+        check_type('L2_n',type(L2_n),type(0.0))
+        check_type('early_stop',type(early_stop),type(True))
+        fit_mode=fit_mode.lower()
+        mode_list=['ne','sgd']
+        check_limit('fit_mode',fit_mode in mode_list,str(mode_list))
+        check_limit('a',a>0.0,'value>0.0')
+        check_limit('iter_max',iter_max>0,'value>0')
+        check_limit('mini_batch',mini_batch>=0,'value>=0')
+        check_limit('L2_n',L2_n>=0.0,'value>=0.0')
+        self.fit_mode=fit_mode
+        self.a=a
+        self.iter_max=iter_max
+        self.mini_batch=mini_batch
+        self.L2_n=L2_n
+        self.early_stop=early_stop
+        self.dp_tool=None
+    
+    #线性内核函数
+    #fx=theta0*1+theta1*x1+theta2*x2+...
+    '''
+    return
+    0: 矩阵相乘结果，即预测值向量，narray(m,1)类型
+    '''
+    def linear_(self,X,theta):
+        return np.dot(X,theta)
+    
+    #代价函数,用于衡量拟合的偏差程度
+    '''
+    return
+    0: 平方误差，float类型
+    '''
+    def cost_(self,y,p_y):
+        re=p_y-y
         return np.dot(re.T,re)/2/len(y)
-        #旧版代码：return (np.sum((fx-y)**2)/2/len(y))
+        #旧版代码：return (np.sum((p_y-y)**2)/2/len(y))
     
-    #拟合方法1： 正规方程求解 
-    #注：直接求得最优解，在特征数少时建议采用该方法，特征数很多时该方法效率很差
-    #L2_n不为0时应用L2正则化（权重衰减），避免过拟合
-    def normal_equation(self,x,y):
-        I=np.eye(len(x.columns))
-        theta=np.dot(np.dot(np.linalg.inv(np.dot(x.T,x)-self.L2_n*I),x.T),y)
+    #正规方程
+    '''
+    return
+    0: 求解的参数向量，narray(m,1)类型
+    '''
+    def norm_equa_(self,X,y,L2_n):
+        I=np.eye(len(X.columns))
+        theta=np.dot(np.dot(np.linalg.inv(np.dot(X.T,X)-L2_n*I),X.T),y)
         return theta
         
-    #拟合方法2： 梯度下降法，计算下一组theta
-    #注：用于逐步逼近最优解，在特征数很多时也有较好的效率
-    #根据每次给到的数据集大小可对应批量梯度下降BGD和随机梯度下降SGD
-    #注：梯度下降需要求损失函数的一阶连续导数，无法应用L1正则化，只能使用L2正则化
-    #(此处代码仅作对照，实际没有使用)
-    def gradient_descent(self,theta,x,y):
+    #单次梯度下降
+    '''
+    return
+    0: 依据学习率和梯度变化后的参数向量，narray(m,1)类型
+    '''
+    def stoc_grad_desc_(self,X,y,theta,L2_n,a):
         temp=theta
-        #计算theta向量按步长变化后的值
-        fx=self.model(x,theta)
-        temp=theta*(1-self.L2_n/len(y))-self.gd_a*(np.dot(x.T,fx-y))/len(y)
-        #旧版代码（非矩阵运算，效率相差6倍）
-        #for i in range(len(theta)):
-            #temp[i]=theta[i]-step_len*np.sum((fx-y)*x.iloc[:,i])/len(y)
+        #计算theta向量依据学习率和梯度变化后的值
+        p_y=self.linear_(X,theta)
+        temp=theta*(1-L2_n/len(y))-a*(np.dot(X.T,p_y-y))/len(y)
         return temp
+        #旧版代码（非矩阵运算，性能相差6倍）
+        #for i in range(len(theta)):
+            #temp[i]=theta[i]-a*np.sum((p_y-y)*X.iloc[:,i])/len(y)
   
-    #直接输入数据进行拟合： 正规方程法
-    #x,y:源数据,L2_n：L2正则化强度
-    def fit_by_ne(self,x_,y,L2_n=0):
-        #补全源数据
-        x=DataPreprocessing.fill_x0(x_)
-        self.L2_n=L2_n
-        #求解
-        self.theta=pd.Series(self.normal_equation(x,y))
-        fx=self.model(x,self.theta)
-        self.score,self.a_result=self.assessment(fx,y,len(self.theta))
-        return self.theta
+    #用正规方程进行拟合
+    #注：直接求得最优解，在特征数少时建议采用该方法，特征数很多时该方法效率很差
+    #L2_n不为0时应用L2正则化（权重衰减），避免过拟合
+    '''
+    return
+    0: 求解的参数向量，Series类型
+    '''
+    def fit_by_ne_(self,X,y):
+        theta=self.norm_equa_(X,y,self.L2_n)
+        return pd.Series(theta)
     
-    #直接输入数据进行拟合： 梯度下降法
-    #x,y:源数据
-    #init_dir:梯度下降设置参数（类型不同，参数不同）
-    #iter_max:迭代次数上限
-    #gd_type:梯度下降类型，默认随机梯度下降
-    #L2_n:L2正则化强度
-    #early_stop:是否允许在cost没有继续下降的趋势时提前结束迭代
-    #feedback：反馈信息
-    #sample_n：每次迭代选取的mini-batch大小
-    def fit_by_gd(self,x_,y,init_dir={'a':0.1},iter_max=200,gd_type='SGD',
-                  L2_n=0,early_stop=True,sample_n=256):
+    #用梯度下降法进行拟合
+    #注：迭代优化逼近最优解，在特征数很多时也有较好的效率
+    #梯度下降需要求代价函数的一阶连续导数，无法应用L1正则化，只能使用L2正则化
+    '''
+    return
+    0: 结束迭代后得到的参数向量，Series类型
+    '''
+    def fit_by_sgd_(self,X,y):
+        n,m=len(y),len(X.columns)
         #校正mini-batch
-        if sample_n>len(x_):
-            sample_n=len(x_)
-        #补全源数据
-        x=DataPreprocessing.fill_x0(x_)
+        if self.mini_batch==0:
+            if n<256:
+                mini_batch=n
+            elif 256*self.iter_max<n:
+                mini_batch=int(n/self.iter_max)
+            else:
+                mini_batch=256
+        else:
+            if self.mini_batch>n:
+                print('warning: mini-batch is too big')
+                mini_batch=n
+            else:
+                mini_batch=self.mini_batch
         #初始化变量
-        theta=pd.Series(np.zeros(len(x.columns))).astype('float')
+        theta=np.zeros(m)
         theta_h,cost_h=[],[]
         theta_h.append(tuple(theta))
-        fx=self.model(x,theta)
-        cost_min=self.cost(fx,y)
+        p_y=self.linear_(X,theta)
+        cost_min=self.cost_(p_y,y)
         cost_h.append(cost_min)
         no_desc=0
         self.iter_num=0
         #迭代计算
-        gd_mng=GradDesc(init_dir,gd_type,self.model,L2_n)
-        for i in range(iter_max):
+        for i in range(self.iter_max):
             #进行一次梯度下降
-            sp_x=x.sample(n=sample_n)
-            sp_y=y[sp_x.index]
-            theta=gd_mng.exec_one_iter(theta,sp_x,sp_y)
+            sp_X=X.sample(n=mini_batch)
+            sp_y=y[sp_X.index]
+            theta=self.stoc_grad_desc_(sp_X,sp_y,theta,self.L2_n,self.a)
             #记录本次结果
             self.iter_num+=1
             theta_h.append(tuple(theta))
-            fx=self.model(x,theta)
-            cost=self.cost(fx,y)
+            p_y=self.linear_(X,theta)
+            cost=self.cost_(p_y,y)
             cost_h.append(cost)
+            #如果超过10次迭代没有进一步降低cost_，提前结束迭代
+            if cost<cost_min:
+                cost_min=cost
+                no_desc=0
+            else:
+                no_desc+=1
+            if (no_desc>=10)&(self.early_stop==True):
+                print('warning: early stopping')
+                break
+            #cost值溢出时停止迭代
+            if cost==float("inf"):
+                print('warning: cost value overflow')
+                break
+        #cost和theta的历史值
+        theta=pd.Series(theta)
+        theta_h=pd.DataFrame(theta_h)
+        cost_h=pd.Series(cost_h)
+        #异常提示：cost变化曲线严重发散
+        if cost_h[len(cost_h)-1]/cost_h[0]>=1e+10:
+            print('warning: seriously divergence')
+        #异常提示：cost变化曲线强烈振荡
+        if cost_h[cost_h>cost_h[0]].count()>0:
+            print('warning: strong oscillation')
+        #异常提示：cost变化曲线末梢不稳定且出现反弹回升
+        if cost_h[cost_h.index>(self.iter_max/2)].mean()/cost_min>2:
+            print('warning: later costs were unstable and rebounded')
+        return theta,theta_h,cost_min,cost_h
+    
+    #X输入校验
+    '''
+    return
+    0: 补齐常数列的X，DataFrame类型
+    '''
+    def check_input_X_(self,X):
+        if type(X)==type(pd.Series()):
+            X=X.to_frame()
+        check_type('X',type(X),type(pd.DataFrame()))
+        type_list=[np.int64,np.float64]
+        for i in range(len(X.columns)):
+            check_type('column %d in X'%i,X.dtypes[i],type_list)
+        return dp.fill_x0(X)
+    
+    #y/p_y输入校验
+    def check_input_y_(self,y,name='y'):
+        check_type(name,type(y),type(pd.Series()))
+        type_list=[np.int64,np.float64]
+        check_type(name,y.dtype,type_list)
+    
+    #theta输入校验
+    def check_input_t_(self,theta):
+        check_type('theta',type(theta),type(pd.Series()))
+        type_list=[np.float64]
+        check_type('theta',theta.dtype,type_list)
+
+    #拟合
+    def fit(self,X,y,output=False,show_time=False,check_input=True):
+        '''\n
+        Function: 使用输入数据拟合线性回归
+        
+        Note: 线性回归的输入数据必须全部是数值类型，其他类型自行预处理
+        
+        Parameters
+        ----------
+        X: 特征矩阵,DataFrame类型
+        y: 观测值向量,Series类型
+        output: 是否返回求解的参数向量，bool类型，默认False
+        show_time: 是否显示时间开销，bool类型，默认False
+        check_input: 是否进行输入校验，bool类型，默认值True
+        ----------
+        
+        Returns
+        -------
+        0: 返回求解的参数向量，Series类型
+        -------
+        '''
+        start=time.clock()
+        #输入校验
+        check_type('check_input',type(check_input),type(True))
+        if check_input==True:
+            check_type('output',type(output),type(True))
+            X=self.check_input_X_(X)
+            self.check_input_y_(y)
+            check_index_match(X,y,'X','y')
+        #归一化校验
+        range_=X.iloc[:,1:].max()-X.iloc[:,1:].min()
+        if (range_.max()<1.1)&(range_.min()>0.9):
+            if self.a<0.1:
+                print('it is recommended to change a over 0.1 for scaled X')
+        else:
+            print('it is recommended to scale X')
+        #选择不同的拟合方式
+        print('\nfitting ---')
+        if self.fit_mode=='ne':
+            theta=self.fit_by_ne_(X,y)
+            self.theta=theta
+            p_y=self.predict(X,check_input=False)
+            a_result=self.assess(y,p_y,detailed=True,check_input=False)
+            self.cost=a_result.loc['cost']
+            self.cost_min=self.cost
+            self.score=a_result.loc['r_sqr']
+        elif self.fit_mode=='sgd':
+            theta,theta_h,cost_min,cost_h=self.fit_by_sgd_(X,y)
+            self.theta=theta
+            self.theta_h=theta_h
+            self.cost=cost_h.iloc[-1]
+            self.cost_min=cost_min
+            self.cost_h=cost_h
+            try:
+                p_y=self.predict(X,check_input=False)
+                self.score=self.assess(y,p_y,check_input=False)
+            except:
+                print('warning: fail to assess on train')
+        time_cost=time.clock()-start
+        if show_time==True:
+            print('\ntime used for training: %f'%time_cost)
+        #返回求得的参数
+        if output==True:
+            return theta
+    
+    #快速绘制cost,theta的变化曲线
+    def plot_change_h(self):
+        '''\n
+        Function: 快速绘制cost,theta的变化曲线
+        
+        Note: 梯度下降拟合后可用，即fit_mode='sgd'
+        
+        Print
+        -------
+        0: 基于matplotlib绘制的关于cost/iter和theta/iter关系的曲线图
+        -------
+        '''
+        try:
+            self.cost_h.plot()
+            plt.xlabel('iteration')
+            plt.ylabel('cost')   
+            plt.suptitle("[history of cost]")
+            plt.show()
+            self.theta_h.plot()
+            plt.xlabel('iteration')
+            plt.ylabel('theta')
+            plt.suptitle("[history of theta]")
+            plt.legend(loc='right')
+            plt.show()
+        except:
+            print('fail to plot: this method can only use after fit by sgd')
+
+    #预测    
+    def predict(self,X,theta=None,show_time=False,check_input=True):
+        '''\n
+        Function: 对输入数据进行预测
+        
+        Note: theta参数不提供时直接使用内部存储
+        
+        Parameters
+        ----------
+        X: 特征矩阵,DataFrame类型
+        theta: 参数向量,Series类型
+        show_time: 是否显示时间开销，bool类型，默认False
+        check_input: 是否进行输入校验，bool类型，默认值True
+        ----------
+        
+        Returns
+        -------
+        0: 预测值向量，Series类型
+        -------
+        '''
+        start=time.clock()
+        #外部传入theta或使用内部缓存
+        if type(theta)==type(None):
+            theta=self.theta
+        #输入校验
+        check_type('check_input',type(check_input),type(True))
+        if check_input==True:
+            X=self.check_input_X_(X)
+            self.check_input_t_(theta)
+            check_feats_match(X.columns,theta,'features in X','theta',mode='len')
+        #预测
+        p_y=pd.Series(self.linear_(X,theta),index=X.index)
+        time_cost=time.clock()-start
+        if show_time==True:
+            print('\ntime used for predict: %f'%time_cost)
+        return p_y
+
+    #执行模型评估
+    def assess(self,y,p_y,theta=None,detailed=False,check_input=True):
+        '''\n
+        Function: 执行模型评估
+        
+        Note: 拟合后关于训练集的r2和cost已保存在内部属性中，
+              通过.score和.cost查看
+        
+        Parameters
+        ----------
+        y: 观测值向量,Series类型
+        p_y: 预测值向量,Series类型
+        detailed: 是否返回详细评估，bool类型，默认False
+        check_input: 是否进行输入校验，bool类型，默认值True
+        ----------
+        
+        Returns
+        -------
+        0: r2或评估结果表，float类型或Series类型
+        -------
+        '''
+        #外部传入theta或使用内部缓存
+        if type(theta)==type(None):
+            theta=self.theta
+        #输入校验
+        check_type('check_input',type(check_input),type(True))
+        if check_input==True:
+            check_type('detailed',type(detailed),type(True))
+            self.check_input_y_(y)
+            self.check_input_y_(p_y,'p_y')
+            check_index_match(y,p_y,'y','p_y')
+        #r2计算
+        r_sqr=stats.r_sqr(y,p_y)
+        #是否进行详细评估
+        if detailed==False:
+            return r_sqr
+        else:
+            k,n=len(theta),len(y)
+            cost=self.cost_(y,p_y)
+            #计算调整r2和代价值
+            adj_r_sqr=stats.adj_r_sqr(r_sqr,n,k)
+            a_result=[]
+            #f_value=self.f_test(p_y,y,len(x),len(theta))
+            a_result.append(('r_sqr',r_sqr))
+            a_result.append(('adj_r_sqr',adj_r_sqr))
+            a_result.append(('cost',cost))
+            a_result=pd.DataFrame(a_result,columns=['index','value'])
+            a_result=a_result.set_index('index').iloc[:,0]
+            return a_result
+        
+
+#逻辑回归    
+class LogisticRegression:
+    '''\n  
+    Note: 以展示各个算法的实现为目的
+    
+    Parameters
+    ----------
+    fit_mode: 拟合模式，str类型,目前只有sgd,
+              'sgd'->随机梯度下降，迭代优化，没有限制但需要选择合适的a和iter_max
+              默认值'sgd'
+    muti_class: 多分类模式，str类型，默认'ovr'，(下面的n指类的数量)
+                'ovr'-> one vs rest，一个分类作为正样本，其余分类作为负样本，
+                        共训练n个分类器
+                'ovo'-> one vs one，一个分类作为正样本，另一个分类作为负样本，
+                        共训练n(n-1)/2个分类器，耗时更长，准确率更高
+                除训练多个分类器，每个分类器一个参数向量的方式外，
+                还可以直接训练单个分类器，该分类器拥有一个参数矩阵，
+                但要求训练集大小一致，ovr容易实现该种方式
+    a: 迭代优化学习率，float类型(>0.0)，默认值0.001
+    iter_max: 迭代优化迭代次数上限，int类型(>0)，默认值1000
+    mini_batch: 迭代优化每次使用的样本数，int类型(>0)，默认值256
+    L2_n: L2正则化系数，float类型(>0.0)，默认值为0，
+          该系数在代价中加入了关于模型复杂度的惩罚项，
+          作用是防止过拟合，一般用于非线性模式
+    early_stop: 是否允许超过一定次数迭代后代价没有进一步降低时提前结束训练，
+                bool类型，默认值True
+    ----------
+    '''
+    
+    def __init__(self,fit_mode='sgd',muti_class='ovo',a=0.001,
+                 iter_max=1000,mini_batch=0,L2_n=0.0,early_stop=True):
+        #校验参数类型和取值
+        #check_type(变量名，变量类型，要求类型)
+        #check_limit(变量名，限制条件，正确取值提示)
+        check_type('fit_mode',type(fit_mode),type(''))
+        check_type('muti_class',type(muti_class),type(''))
+        check_type('a',type(a),type(0.0))
+        check_type('iter_max',type(iter_max),type(0))
+        check_type('mini_batch',type(mini_batch),type(0))
+        check_type('L2_n',type(L2_n),type(0.0))
+        check_type('early_stop',type(early_stop),type(True))
+        fit_mode=fit_mode.lower()
+        mode_list,mode_list2=['sgd'],['ovr','ovo']
+        check_limit('fit_mode',fit_mode in mode_list,str(mode_list))
+        check_limit('muti_class',muti_class in mode_list2,str(mode_list2))
+        check_limit('a',a>0.0,'value>0.0')
+        check_limit('iter_max',iter_max>0,'value>0')
+        check_limit('mini_batch',mini_batch>=0,'value>=0')
+        check_limit('L2_n',L2_n>=0.0,'value>=0.0')
+        self.fit_mode=fit_mode
+        self.a=a
+        self.iter_max=iter_max
+        self.mini_batch=mini_batch
+        self.L2_n=L2_n
+        self.early_stop=early_stop
+        self.muti_class=muti_class
+        
+    #线性内核函数
+    '''
+    return
+    0: 矩阵相乘结果，即预测值向量，narray(m,1)类型
+    '''
+    def linear_(self,X,theta):
+        return np.dot(X,theta)
+    
+    #sigmoid函数
+    '''
+    return
+    0: 映射后的概率值，narray(m,1)类型，范围0.0~1.0
+    '''
+    def sigmoid_(self,array):
+        return 1.0/(1.0+np.e**(-1.0*array))
+    
+    #代价函数
+    '''
+    return
+    0: log误差，float类型
+    '''
+    def cost_(self,p_y,y):
+        return np.sum(y*np.log(p_y)+(1-y)*np.log(1-p_y))*(-1.0/len(y))
+    
+    #单次梯度下降
+    #注：逻辑回归的梯度计算和线性回归是一样的
+    '''
+    return
+    0: 依据学习率和梯度变化后的参数向量，narray(m,n)类型
+    '''
+    def stoc_grad_desc_(self,X,y,theta,L2_n,a):
+        temp=theta
+        p_y=self.sigmoid_(self.linear_(X,theta))
+        temp=theta*(1-L2_n/len(y))-a*(np.dot(X.T,p_y-y))/len(y)
+        return temp
+    
+    #使用梯度下降拟合
+    #注：迭代优化逼近最优解，在特征数很多时也有较好的效率
+    #梯度下降需要求损失函数的一阶连续导数，无法应用L1正则化，只能使用L2正则化
+    def fit_by_sgd_(self,X,y):
+        #数据集大小，特征数量
+        n,m=len(y),len(X.columns)
+        #校正mini-batch
+        if self.mini_batch==0:
+            if n<256:
+                mini_batch=n
+            elif 256*self.iter_max<n:
+                mini_batch=int(n/self.iter_max)
+            else:
+                mini_batch=256
+        else:
+            if self.mini_batch>n:
+                print('warning: mini-batch is too big')
+                mini_batch=n
+            else:
+                mini_batch=self.mini_batch
+        #初始化变量
+        theta=np.zeros(m)
+        theta_h=np.zeros((self.iter_max,m))
+        cost_h=np.zeros(self.iter_max)
+        p_y=self.sigmoid_(self.linear_(X,theta))
+        cost_min=self.cost_(p_y,y)
+        cost_h[0]=cost_min
+        no_desc,self.iter_num=0,0
+        #迭代计算
+        for i in range(self.iter_max):
+            #进行一次梯度下降
+            sp_X=X.sample(n=mini_batch)
+            sp_y=y[sp_X.index]
+            theta=self.stoc_grad_desc_(sp_X,sp_y,theta,self.L2_n,self.a)
+            #记录本次结果
+            self.iter_num+=1
+            theta_h[i]=theta
+            p_y=self.sigmoid_(self.linear_(X,theta))
+            cost=self.cost_(p_y,y)
+            cost_h[i]=cost
             #如果超过10次迭代没有进一步降低cost，提前结束迭代
             if cost<cost_min:
                 cost_min=cost
                 no_desc=0
             else:
                 no_desc+=1
-            if no_desc>=10 & early_stop==True:
+            if (no_desc>=10)&(self.early_stop==True):
                 print('early stopping')
+                break
             #cost值溢出时停止迭代
             if cost==float("inf"):
-                print('cost value overflow')
+                print('warning: cost value overflow')
                 break
-        #保存结果
-        self.theta=theta
-        self.theta_h=pd.DataFrame(theta_h)
-        self.cost_h=pd.Series(cost_h)
-        self.cost_min=self.cost_h[self.cost_h==cost_min]
-        #cost严重发散时不进行评估
-        if cost_h[len(cost_h)-1]/cost_h[0]<=1e+10:
-            self.score,self.a_result=self.assessment(fx,y,len(self.theta))
-        #异常提示
-        if self.cost_h[self.cost_h>self.cost_h[0]].count()>0:
-            print('Strong oscillation')
-        if self.cost_h[self.cost_h.index>(iter_max/2)].mean()/cost_min.values[0]>2:
-            print('Later costs were unstable and rebounded')
-        return theta
-    
-    #快速绘制cost,theta的变化曲线
-    #注：仅梯度下降法求解后可用
-    def plot_change_h(self):
-        self.cost_h.plot()
-        plt.xlabel('iteration')
-        plt.ylabel('cost')    
-        plt.show()
-        self.theta_h.plot()
-        plt.xlabel('iteration')
-        plt.ylabel('theta')
-        plt.show()
-
-    #执行模型评估
-    #k:theta参数个数
-    #return 首要评分，全部指标
-    def assessment(self,fx,y,k):
-        a_result=[]
-        cost=self.cost(fx,y)
-        r_sqr=Statistics.get_r_sqr(fx,y)
-        adj_r_sqr=Statistics.get_adj_r_sqr(r_sqr,len(fx),k)
-        #f_value=self.f_test(fx,y,len(x),len(theta))
-        a_result.append(('r_sqr',r_sqr))
-        a_result.append(('adj_r_sqr',adj_r_sqr))
-        a_result.append(('cost',cost))
-        a_result=pd.DataFrame(a_result,columns=['index','value'])
-        a_result.set_index('index',inplace=True)
-        return r_sqr,a_result
-    
-    #预测测试 
-    #return 预测值，首要评分，全部指标
-    def predict_test(self,x_,y):
-        x=DataPreprocessing.fill_x0(x_)
-        fx=pd.Series(self.model(x,self.theta))
-        fx.index=x.index
-        score,a_result=self.assessment(fx,y,len(self.theta))
-        return fx,score,a_result
-    
-    #预测    
-    def predict(self,x_):
-        x=DataPreprocessing.fill_x0(x_)
-        fx=pd.Series(self.model(x,self.theta))
-        fx.index=x.index
-        return fx
-    
-class LogisticRegression:
-    
-    #模型函数
-    def model(self,x,theta):
-        return self.sigmoid(np.dot(x,theta))
-    
-    #将目标函数结果值映射为概率值，范围0~1
-    def sigmoid(self,fx):
-        return 1.0/(1.0+np.e**(-1.0*fx))
-    
-    #代价函数
-    def cost(self,hx,y):
-        return np.sum(y*np.log(hx)+(1-y)*np.log(1-hx))*(-1.0/len(y))
-    
-    #拟合一个二分类的分类器
-    def fit_binary(self,x,y,init_dir,iter_max,gd_type,
-                   L2_n,early_stop,sample_n):
-        print('fitting...')
-        #初始化变量
-        theta=pd.Series(np.zeros(len(x.columns))).astype('float')
-        theta_h,cost_h=[],[]
-        no_desc=0
-        iter_num=0
-        hx=self.model(x,theta)
-        cost_min=self.cost(hx,y) 
-        cost_h.append(cost_min)
-        theta_h.append(tuple(theta))
-        #初始化并执行梯度下降
-        gd_mng=GradDesc(init_dir,gd_type,self.model,L2_n)
-        for i in range(iter_max):
-            #选取mini-batch
-            sp_x=x.sample(n=sample_n)
-            sp_y=y[sp_x.index]
-            #单次迭代
-            theta=gd_mng.exec_one_iter(theta,sp_x,sp_y)
-            #记录本次执行结果
-            iter_num+=1
-            theta_h.append(tuple(theta))
-            hx=self.model(x,theta)
-            cost=self.cost(hx,y)
-            cost_h.append(cost)
-            #超过10次没有进一步降低cost，提前结束迭代
-            if cost<cost_min:
-                cost_min=cost
-                no_desc=0
-            else:
-                no_desc+=1
-            if no_desc>=10 & early_stop==True:
-                print('Early stopping')
-                break
-            #cost过大溢出
-            if cost==float("inf"):
-                print('Cost value overflow')
-                break
-        #转换结果
-        cost_h=pd.Series(cost_h)
+        #cost和theta的历史值
+        theta=pd.Series(theta)
         theta_h=pd.DataFrame(theta_h)
-        cost_min=cost_h[cost_h==cost_min]
-        #异常提示
+        cost_h=pd.Series(cost_h)
+        #异常提示：cost变化曲线严重发散
+        if cost_h[len(cost_h)-1]/cost_h[0]>=1e+10:
+            print('warning: seriously divergence')
+        #异常提示：cost变化曲线强烈振荡
         if cost_h[cost_h>cost_h[0]].count()>0:
-            print('Strong oscillation')
-        if cost_h[cost_h.index>(iter_max/2)].mean()/cost_min.values[0]>2:
-            print('Later costs were unstable and rebounded')
+            print('warning: strong oscillation')
+        #异常提示：cost变化曲线后半部分不稳定且出现反弹回升
+        if cost_h[cost_h.index>(self.iter_max/2)].mean()/cost_min>2:
+            print('warning: later costs were unstable and rebounded')
         return theta,theta_h,cost_min,cost_h
     
-    #直接输入数据拟合
-    def fit(self,x_,y_,init_dir={'a':1},iter_max=200,gd_type='SGD',
-            L2_n=0,early_stop=True,sample_n=256):
-        #校正mini-batch大小
-        if sample_n>len(x_):
-            sample_n=len(x_)
-        #补全x
-        x=DataPreprocessing.fill_x0(x_)
-        #判断是二分类还是多分类
-        values=y_.drop_duplicates().sort_values().tolist()
-        if len(values)<=1:
-            raise NameError('class num in y should >=2')
-        elif len(values)==2:
-            y=y_
-            theta,theta_h,cost_min,cost_h=\
-                self.fit_binary(x,y,init_dir,iter_max,gd_type,
-                    L2_n,early_stop,sample_n)
+    #X输入校验
+    '''
+    return
+    0: 补齐常数列的X，DataFrame类型
+    '''
+    def check_input_X_(self,X):
+        if type(X)==type(pd.Series()):
+            X=X.to_frame()
+        check_type('X',type(X),type(pd.DataFrame()))
+        type_list=[np.int64,np.float64]
+        for i in range(len(X.columns)):
+            check_type('column %d in X'%i,X.dtypes[i],type_list)
+        return dp.fill_x0(X)
+    
+    #y/p_y输入校验
+    '''
+    return
+    0: 转换为str的y，Series类型
+    '''
+    def check_input_y_(self,y,name='y'):
+        check_type(name,type(y),type(pd.Series()))
+        return y.astype('str')
+    
+    #theta输入校验
+    def check_input_t_(self,theta):
+        if type(theta)==type(pd.Series()):
+            theta=theta.to_frame()
+        check_type('theta',type(theta),type(pd.DataFrame()))
+        type_list=[np.float64]
+        for i in range(len(theta.columns)):
+            check_type('theta',theta.dtypes[i],type_list)
+    
+    #拟合
+    def fit(self,X,y,output=False,show_time=False,check_input=True):
+        '''\n
+        Function: 使用输入数据拟合逻辑回归
+        
+        Note: 逻辑回归的特征输入为连续型数值，分类输出为离散标签
+        
+        Parameters
+        ----------
+        X: 特征矩阵,DataFrame类型
+        y: 观测值向量,Series类型
+        output: 是否返回求解的参数向量，bool类型，默认False
+        show_time: 是否显示时间开销，bool类型，默认False
+        check_input: 是否进行输入校验，bool类型，默认值True
+        ----------
+        
+        Returns
+        -------
+        0: 返回求解的参数向量，Series类型
+        -------
+        '''
+        start=time.clock()
+        #输入校验
+        check_type('check_input',type(check_input),type(True))
+        if check_input==True:
+            check_type('output',type(output),type(True))
+            X=self.check_input_X_(X)
+            y=self.check_input_y_(y)
+            check_index_match(X,y,'X','y')
+        #判断类别数量
+        values=y.sort_values().drop_duplicates().tolist()
+        features_n,classes_n=len(X.columns),len(values)
+        if classes_n<=1:
+            raise ValueError('classes_n in y should >=2')
+        if classes_n>=0.5*len(y):
+            print('\nwarning: too many classes in y')
+        self.classes=values
+        #归一化校验
+        range_=X.iloc[:,1:].max()-X.iloc[:,1:].min()
+        if (range_.max()<1.1)&(range_.min()>0.9):
+            if self.a<0.1:
+                print('it is recommended to change a over 0.1 for scaled X')
         else:
-            #按one vs rest规则拟合多个分类器
-            y=DataPreprocessing.dummy_var(y_)
-            theta,theta_h,cost_min,cost_h=[],[],[],[]
-            for i in range(len(y.columns)):
-                theta_,theta_h_,cost_min_,cost_h_=\
-                    self.fit_binary(x,y.iloc[:,i],init_dir,iter_max,gd_type,
-                             L2_n,early_stop,sample_n)
-                theta.append(theta_)
+            print('it is recommended to scale X')
+        #将单列的多类别分类值转换为多列的01类别判断，索引(记录，类)->属于该类
+        Y=dp.dummy_var(y)
+        theta_h,cost_h=[],[]
+        #多分类模式ovr
+        if self.muti_class=='ovr':
+            theta=np.zeros((features_n,classes_n))
+            cost_min=np.zeros(classes_n)
+            cost=np.zeros(classes_n)
+            for i in range(classes_n):
+                print('\nfitting classifier %d ---'%i)
+                theta_,theta_h_,cost_min_,cost_h_=self.fit_by_sgd_(X,Y.iloc[:,i])
+                theta[:,i],cost_min[i],cost[i]=theta_,cost_min_,cost_h_.iloc[-1]
                 theta_h.append(theta_h_)
-                cost_min.append(cost_min_)
                 cost_h.append(cost_h_)
-        #保存结果
+            self.classes_paired=None
+        #多分类模式ovo
+        elif self.muti_class=='ovo':
+            #正负样本选取矩阵,索引(组合，类)->取用
+            class_p,class_n=dp.combine_enum_paired(list(range(classes_n)))
+            #应用正负样本选取矩阵后的分类情况，索引(记录，组合)->分类判断
+            #1->正样本分类，0->负样本分类，0.5->无法判别
+            Y_=(np.dot(Y,class_p.T)-np.dot(Y,class_n.T)+1.0)/2.0
+            Y_=pd.DataFrame(Y_,index=Y.index)
+            combines_n=len(Y_.columns)
+            theta=np.zeros((features_n,combines_n))
+            cost_min=np.zeros(combines_n)
+            cost=np.zeros(combines_n)
+            for i in range(combines_n):
+                print('\nfitting classifier %d ---'%i)
+                theta_,theta_h_,cost_min_,cost_h_=self.fit_by_sgd_(X,Y_.iloc[:,i])
+                theta[:,i],cost_min[i],cost[i]=theta_,cost_min_,cost_h_.iloc[-1]
+                theta_h.append(theta_h_)
+                cost_h.append(cost_h_)
+            self.classes_paired=class_p-class_n
+        theta=pd.DataFrame(theta)
+        cost_min=pd.Series(cost_min)
+        cost=pd.Series(cost)
         self.theta=theta
         self.theta_h=theta_h
         self.cost_min=cost_min
         self.cost_h=cost_h
-        self.classificaion=values
-        #评估模型
-        p=self.predict(x)
-        self.score,self.pred_dist=self.assessment(p,y_) 
-        return theta
+        self.cost=cost
+        p_y=self.predict(X,check_input=False)
+        self.score=self.assess(y,p_y,check_input=False)
+        time_cost=time.clock()-start
+        if show_time==True:
+            print('\ntime used for training: %f'%time_cost)
+        #返回求得的参数
+        if output==True:
+            return theta
     
-    #二分类预测
-    def predict_(self,x_,theta,discrete_p=True):
-        x=DataPreprocessing.fill_x0(x_)
-        hx=self.model(x,theta)
-        p=pd.Series(hx)
-        p.index=x.index
+    #所有分类器的预测结果
+    '''
+    return
+    0: 预测矩阵，narray(m,n)类型
+    '''
+    def predict_(self,X,theta,classes_paired=None,return_proba=False):
+        #在各个分类器判定为正分类的概率，索引（记录，分类器）->正分类概率
+        p_y=self.sigmoid_(self.linear_(X,theta))
+        #进一步转化为各个分类的概率,索引(记录，类)
+        if type(classes_paired)!=type(None):
+            class_p=classes_paired.copy()
+            class_p[class_p<0]=0
+            class_n=-classes_paired.copy()
+            class_n[class_n<0]=0
+            p_y=np.dot(p_y,class_p)+np.dot(1-p_y,class_n) 
+        #归一化
+        p_y=(p_y.T/p_y.sum(axis=1)).T
         #转化为离散值
-        if discrete_p==True:
-            p[p>0.5]=1
-            p[p<=0.5]=0 
-        return p        
+        if return_proba==False:
+            p_y_=np.zeros(len(p_y))
+            p_y_max=p_y.max(axis=1)
+            max_idx=(p_y.T==p_y_max).T.astype('int')
+            classes_idx=np.array(range(p_y.shape[1]))
+            p_y_=np.dot(max_idx,classes_idx).astype('int')
+            return p_y_
+        else:
+            return p_y        
     
-    #完整预测
-    def predict(self,x_):
-        values=self.classificaion
-        if len(values)==2:
-            return self.predict_(x_,self.theta)
-        else:          
-            p_=pd.DataFrame()
-            for i in range(len(values)):
-                theta=self.theta[i]
-                p_[i]=self.predict_(x_,theta,discrete_p=False)
-            p_max=p_.max(axis=1)
-            p=pd.Series(np.zeros(len(p_)))
-            p.index=p_.index
-            if type(values[0])=='str':
-                p=p.astype('str')
-            for j in range(len(values)):
-                p[p_.iloc[:,j]==p_max]=values[j]
-        return p
+    #预测
+    def predict(self,X,theta=None,classes=None,classes_paired=None,
+                return_proba=False,show_time=False,check_input=True):
+        '''\n
+        Function: 对输入数据进行预测
+        
+        Note: theta,classes,classes_paired参数不提供时直接使用内部存储
+        
+        Parameters
+        ----------
+        X: 特征矩阵,DataFrame类型
+        theta: 参数向量,Series类型
+        classes: 类标签，list(str)类型
+        classes_paired: 正负样本类选取，narray(m,n)类型
+        return_proba: 是否返回分类概率，bool类型，默认False
+        show_time: 是否显示时间开销，bool类型，默认False
+        check_input: 是否进行输入校验，bool类型，默认值True
+        ----------
+        
+        Returns
+        -------
+        0: 预测值向量，Series类型
+        -------
+        '''
+        start=time.clock()
+        #外部传入参数或使用内部缓存
+        if type(theta)==type(None):
+            theta=self.theta
+        if type(classes)==type(None):
+            classes=self.classes
+        if type(classes_paired)==type(None):
+            classes_paired=self.classes_paired
+        #输入校验
+        check_type('check_input',type(check_input),type(True))
+        if check_input==True:
+            X=self.check_input_X_(X)
+            self.check_input_t_(theta)
+            check_feats_match(X.columns,theta,'features in X','theta',mode='len')
+        #预测
+        p_y=self.predict_(X,theta,classes_paired,return_proba)
+        if return_proba==False:
+            p_y=pd.Series(p_y,name='classify',index=X.index)
+            for i in range(len(classes)):
+                p_y[p_y==i]=classes[i]
+            time_cost=time.clock()-start
+            if show_time==True:
+                print('\ntime used for predict: %f'%time_cost)
+            return p_y
+        else:
+            time_cost=time.clock()-start
+            if show_time==True:
+                print('\ntime used for predict: %f'%time_cost)
+            return pd.DataFrame(p_y,columns=classes,index=X.index)
     
     #评估
-    def assessment(self,p,y):
-        cp=pd.DataFrame()
-        cp['y'],cp['p']=y,p
-        #整体准确率
-        accuracy=len(cp[cp['y']==cp['p']])*1.0/len(y)
-        #计算观测值/预测值矩阵
-        values=self.classificaion
-        pred_dist=np.zeros((len(values),len(values)))
-        for i in range(len(values)):
-            for j in range(len(values)):
-                bool_index=(cp['y']==values[j])&(cp['p']==values[i])
-                pred_dist[i][j]=len(cp[bool_index])*1.0/len(y)
-        pred_dist=pd.DataFrame(pred_dist,
-                               columns='y_'+pd.Series(values).astype('str'),
-                               index='p_'+pd.Series(values).astype('str'))
-        return accuracy,pred_dist
-    
-    #预测测试 
-    def predict_test(self,x,y):
-        p=self.predict(x)
-        score,pred_dist=self.assessment(p,y)
-        return p,score,pred_dist
-  
-#各类梯度下降算法
-class GradDesc:
-    
-    #此处model为外部传入的模型函数，参数只能是x和theta
-    def __init__(self,init_dir,gd_type,model,L2_n):
-        self.type_list=('SGD','Momentum','Nesterov',
-                   'Adagrad','RMSProp','Adadelta',
-                   'Adam','Adamax','Nadam')
-        if gd_type not in self.type_list:
-            print('gd_type should in:')
-            print(self.type_list)
-            raise TypeError('Unknown type')
-        else:
-            self.gd_type=gd_type
-            self.model=model
-            self.gd_init(init_dir,gd_type)
-            self.L2_n=L2_n
+    def assess(self,y,p_y,return_dist=False,check_input=True):
+        '''\n
+        Function: 执行模型评估
         
-    def exec_one_iter(self,theta,sp_x,sp_y):
-        if self.gd_type=='SGD':
-            theta=self.gd_sgd(theta,sp_x,sp_y) 
-        elif self.gd_type=='Momentum':
-            theta=self.gd_momentum(theta,sp_x,sp_y)  
-        elif self.gd_type=='Nesterov':
-            theta=self.gd_nesterov(theta,sp_x,sp_y)  
-        elif self.gd_type=='Adagrad':
-            theta=self.gd_adagrad(theta,sp_x,sp_y)  
-        elif self.gd_type=='RMSProp':
-            theta=self.gd_rmsprop(theta,sp_x,sp_y)  
-        elif self.gd_type=='Adadelta':
-            theta=self.gd_adadelta(theta,sp_x,sp_y)  
-        elif self.gd_type=='Adam':
-            theta=self.gd_adam(theta,sp_x,sp_y)  
-        elif self.gd_type=='Adamax':
-            theta=self.gd_adamax(theta,sp_x,sp_y)  
-        elif self.gd_type=='Nadam':
-            theta=self.gd_nadam(theta,sp_x,sp_y)
-        return theta
-    
-    #随机梯度下降（基础）
-    def gd_sgd(self,theta,x,y):
-        temp=theta
-        fx=self.model(x,theta)
-        temp=theta*(1-self.L2_n/len(y))-self.gd_a*(np.dot(x.T,fx-y))/len(y)
-        return temp
-    
-    #动量加速梯度下降
-    #注：p是动量因子，一般<=0.9
-    def gd_momentum(self,theta,x,y):
-        temp=theta
-        #theta更新量=上一次的更新量last_m乘上动量因子p，再加上当前梯度g
-        fx=self.model(x,theta)
-        g=(np.dot(x.T,fx-y))/len(y)
-        self.gd_m=self.gd_p*self.gd_m+g
-        temp=theta*(1-self.L2_n/len(y))-self.gd_a*self.gd_m
-        return temp
+        Note: 拟合后关于训练集的accuracy和cost已保存在内部属性中，
+              通过.score和.cost查看
         
-    #nesterov在momentum的基础上引入动量项修正当前梯度的计算
-    def gd_nesterov(self,theta,x,y):
-        temp=theta
-        #theta更新量=上一次的更新量last_m乘上动量因子p，再加上经过动量项修正的当前梯度g
-        fx=self.model(x,theta-self.gd_a*self.gd_p*self.gd_m)
-        g=(np.dot(x.T,fx-y))/len(y)
-        self.gd_m=self.gd_p*self.gd_m+g
-        temp=theta*(1-self.L2_n/len(y))-self.gd_a*self.gd_m
-        return temp
+        Parameters
+        ----------
+        y: 观测值向量,Series类型
+        p_y: 预测值向量,Series类型
+        return_dist: 是否返回预测分布，bool类型，默认False
+        check_input: 是否进行输入校验，bool类型，默认值True
+        ----------
         
-    #adagrad根据历史梯度的变化来修正学习率
-    def gd_adagrad(self,theta,x,y):
-        temp=theta
-        #约束项regularizer:
-        #分母=(历史梯度平方和n+防止除零情况的平滑项e)的平方根
-        fx=self.model(x,theta)
-        g=(np.dot(x.T,fx-y))/len(y)
-        self.gd_n=self.gd_n+g**2
-        delta=-(self.gd_a/np.sqrt(self.gd_n+self.gd_e))*g
-        temp=theta*(1-self.L2_n/len(y))+delta
-        return temp
-    
-    #rmsprop是对adagrad的改进
-    #同样是根据历史梯度变化来修正学习率，但是历史梯度累计限制到固定范围，
-    #且不存储历史项，而是通过近似法求动态平均值
-    def gd_rmsprop(self,theta,x,y):
-        temp=theta
-        #约束项regularizer:
-        #分母=(历史梯度g**2的动态平均值E+防止除零情况的平滑项e)的平方根
-        #历史梯度g**2的动态平均值E又可称为历史梯度的均方根误差RMS
-        fx=self.model(x,theta)
-        g=(np.dot(x.T,fx-y))/len(y)
-        self.gd_E=self.gd_p*self.gd_E+(1-self.gd_p)*(g**2)
-        delta=-(self.gd_a/np.sqrt(self.gd_E+self.gd_e))*g
-        temp=theta*(1-self.L2_n/len(y))+delta
-        return temp
-    
-    #adadelta在rmsprop的基础上替换掉了全局学习率,以历史变化率的RMS替代
-    def gd_adadelta(self,theta,x,y):
-        temp=theta
-        #约束项regularizer:
-        #分母=(历史梯度g**2的动态平均值E+防止除零情况的平滑项e)的平方根
-        #分子=(历史变化量delta**2的动态平均值E)的平方根
-        fx=self.model(x,theta)
-        g=(np.dot(x.T,fx-y))/len(y)
-        self.gd_Eg2=self.gd_p*self.gd_Eg2+(1-self.gd_p)*(g**2)
-        delta=-(np.sqrt(self.gd_Ed2+self.gd_e)/np.sqrt(self.gd_Eg2+self.gd_e))*g
-        temp=theta*(1-self.L2_n/len(y))+delta
-        self.gd_Ed2=self.gd_p*self.gd_Ed2+(1-self.gd_p)*(delta**2)
-        return temp
-    
-    #Adam本质上是带有动量项的RMSprop，它利用梯度的一阶矩估计和二阶矩估计动态调整每个参数的学习率
-    def gd_adam(self,theta,x,y):
-        temp=theta
-        fx=self.model(x,theta)
-        g=np.dot(x.T,fx-y)/len(y)
-        self.gd_t=self.gd_t+1
-        self.gd_m=self.gd_u*self.gd_m+(1-self.gd_u)*g
-        self.gd_n=self.gd_v*self.gd_n+(1-self.gd_v)*(g**2)
-        m_h=self.gd_m/(1-self.gd_u**self.gd_t)
-        n_h=self.gd_n/(1-self.gd_v**self.gd_t)
-        delta=-self.gd_a*m_h/(np.sqrt(n_h)+self.gd_e)
-        temp=theta*(1-self.L2_n/len(y))+delta
-        return temp
-    
-    #Adamax是Adam的一种变体，此方法对学习率的上限提供了一个更简单的范围
-    def gd_adamax(self,theta,x,y):
-        temp=theta
-        fx=self.model(x,theta)
-        g=np.dot(x.T,fx-y)/len(y)
-        self.gd_t=self.gd_t+1
-        self.gd_m=self.gd_u*self.gd_m+(1-self.gd_u)*g
-        self.gd_n=pd.DataFrame([self.gd_v*self.gd_n,np.abs(g)]).max()
-        m_h=self.gd_m/(1-self.gd_u**self.gd_t)
-        delta=-self.gd_a*m_h/(self.gd_n+self.gd_e)
-        temp=theta*(1-self.L2_n/len(y))+delta
-        return temp
-    
-    #Nadam类似于带有Nesterov动量项的Adam
-    def gd_nadam(self,theta,x,y):
-        temp=theta
-        fx=self.model(x,theta)
-        g=np.dot(x.T,fx-y)/len(y)
-        self.gd_t=self.gd_t+1
-        g_h=g/(1-self.gd_u**((1+self.gd_t)*self.gd_t/2))
-        self.gd_m=(self.gd_u**self.gd_t)*self.gd_m+(1-self.gd_u**self.gd_t)*g
-        self.gd_n=self.gd_v*self.gd_n+(1-self.gd_v)*(g**2)
-        m_h=self.gd_m/(1-self.gd_u**((2+self.gd_t)*(1+self.gd_t)/2))
-        n_h=self.gd_n/(1-self.gd_v**self.gd_t)
-        m_m=(1-self.gd_u**self.gd_t)*g_h+(self.gd_u**(self.gd_t+1))*m_h
-        delta=-self.gd_a*m_m/(np.sqrt(n_h)+self.gd_e)
-        temp=theta*(1-self.L2_n/len(y))+delta
-        return temp
-        
-    ##参数初始化,以字典类型传入参数
-    ## SGD : a
-    ## Momentum,Nesterov : a,p
-    ## Adagrad : a,e,k
-    ## RMSProp : a,p,e,k
-    ## Adadelta : p,e,k
-    ## Adam,Adamax,Nadam : a,u,v,e,k
-    ##(a为学习率，e为防止除零的平滑项，k为theta参数个数)
-    def gd_init(self,init_dir,gd_type):
-        try:
-            if gd_type in ('SGD'):
-                self.gd_a=init_dir['a']
-            elif gd_type in ('Momentum','Nesterov'):
-                self.gd_a=init_dir['a']
-                self.gd_p=init_dir['p']
-                self.gd_m=np.zeros(init_dir['k'])
-            elif gd_type in ('Adagrad'):   
-                self.gd_a=init_dir['a']
-                self.gd_e=init_dir['e']
-                self.gd_n=np.zeros(init_dir['k'])
-            elif gd_type in ('RMSProp'):   
-                self.gd_a=init_dir['a']
-                self.gd_p=init_dir['p']
-                self.gd_e=init_dir['e']
-                self.gd_E=np.zeros(init_dir['k'])
-            elif gd_type in ('Adadelta'): 
-                self.gd_p=init_dir['p']
-                self.gd_e=init_dir['e']
-                self.gd_Eg2=np.zeros(init_dir['k'])
-                self.gd_Ed2=np.zeros(init_dir['k'])
-            elif gd_type in ('Adam','Adamax','Nadam'): 
-                #参考值:a=0.001,u=0.9,v=0.999,e=1e-8
-                self.gd_a=init_dir['a']
-                self.gd_u=init_dir['u']
-                self.gd_v=init_dir['v']
-                self.gd_e=init_dir['e']
-                self.gd_m=np.zeros(init_dir['k'])
-                self.gd_n=np.zeros(init_dir['k'])
-                self.gd_t=0
-        except:
-            print('gd init error,check parameters')
-        
-class Statistics:
-    
-    #源数据评估： 相关系数 (目前只实现了pearson一种)
-    #correlation_coefficient
-    
-    #计算x与y的相关系数向量
-    def corr_xy(x,y):
-        k = len(x.columns)
-        correl=np.empty(k, dtype=float)
-        for ia,ca in enumerate(x.columns):
-            correl[ia]=Statistics.corrf(x[ca],y)
-        return pd.Series(correl,index=x.columns,name='y')
-    
-    #计算x各特征之间的相关系数矩阵
-    def corr_xx(x):
-        k=len(x.columns)
-        correl=np.empty((k,k),dtype=float)
-        for ia,ca in enumerate(x.columns):
-            for ib,cb in enumerate(x.columns):
-                correl[ia][ib]=Statistics.corrf(x[ca],x[cb])
-        return pd.DataFrame(correl,index=x.columns,columns=x.columns)
- 
-    #计算两个向量的相关系数
-    def corrf(a,b):
-        if len(a)!=len(b):
-            raise TypeError('a,b should have the same length')
-        da=a-a.mean()
-        db=b-b.mean()
-        n=len(a)
-        Da=np.dot(da.T,da)/n
-        Db=np.dot(db.T,db)/n
-        Covab=np.dot(da.T,db)/n
-        return Covab/(np.sqrt(Da)*np.sqrt(Db))
-    
-    #模型评估-模型解释力：R方(判定系数)
-    #范围0~1，越大拟合结果越好
-    def get_r_sqr(fx,y):
-        #总平方和
-        buf1=y-y.mean()
-        SST=np.dot(buf1.T,buf1)
-        #SST=np.sum((y-y.mean())**2)
-        #残差平方和
-        buf2=fx-y
-        SSE=np.dot(buf2.T,buf2)
-        #SSE=np.sum((fx-y)**2)
-        #回归平方和=总平方和-残差平方和
-        #R方=回归平方和/总平方和
-        return (SST-SSE)/SST
-    
-    #模型评估-模型解释力：调整R方
-    #（消除样本数和参数个数带来的影响）
-    #r2:R方
-    #n:样本容量
-    #k:theta参数个数
-    def get_adj_r_sqr(r2,n,k):
-        if n-k==0:
-            print('adj_r_sqr error:n=k')
-            return 0
-        else:
-            return 1-(1-r2)*(n-1)/(n-k)
-              
-    '''
-    #（这个没搞明白什么意思）
-    #模型评估-回归显著性：F检验
-    #(用于判断回归模型是否能真实反映数据之间的关系)
-    #n:样本容量
-    #k:theta参数个数
-    def f_test(self,fx,y,n,k):
-        #回归平方和
-        #（回归平方和+残差平方和=总平方和）
-        SSR=np.sum((fx-y.mean())**2)
-        #残差平方和
-        SSE=np.sum((fx-y)**2)
-        #F统计量
-        return (SSR/(k-1))/(SSE/(n-k))
-    ''' 
-        
+        Returns
+        -------
+        0: 准确率，float类型
+        1: 预测分布，DataFrame类型
+        -------
+        '''
+        #输入校验
+        if check_input==True:
+            y=self.check_input_y_(y)
+            p_y=self.check_input_y_(p_y,'p_y')
+            check_index_match(y,p_y,'y','p_y')
+        #返回准确率和预测分布
+        return stats.accuracy(y,p_y,return_dist,self.classes)
