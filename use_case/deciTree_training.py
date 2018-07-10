@@ -58,12 +58,12 @@ test_X1_=dp.discret(test_X1,rg)
 #ID3(没有处理连续特征的能力，需要预处理)
 #训练决策树
 dtModel1=dt.DecisionTree(model_type='id3')
-deciTree1=dtModel1.fit(X1_,y1,output=True)
+deciTree1=dtModel1.fit(X1_,y1,output=True,show_time=True)
 dtModel1.plot()
 #dtModel1.plot(start_id=4,print_loc=True)
 #dtModel1.print_nodes()
 #预测
-result1=dtModel1.predict(test_X1_)
+result1=dtModel1.predict(test_X1_,show_time=True)
 score1=dtModel1.assess(test_y1,result1)
 print('\nID3 test score: %f'%score1)
 
@@ -75,35 +75,35 @@ dtModel1.read_tree('D:\\Model\\deciTree.txt')
 #连续特征
 #训练决策树
 dtModel2=dt.DecisionTree(model_type='c4.5')
-deciTree2=dtModel2.fit(X1,y1,output=True)
+deciTree2=dtModel2.fit(X1,y1,output=True,show_time=True)
 dtModel2.plot()
 #dtModel2.print_nodes()
 #预测(顺便测试一下获取决策路径)
 result2=dtModel2.predict(X1)
-score2=dtModel2.assess(y1,result2)
+score2=dtModel2.assess(y1,result2,show_time=True)
 print('\nC4.5 train score: %f'%score2)
-result2,paths=dtModel2.predict(test_X1,return_paths=True)
+result2,paths=dtModel2.predict(test_X1,return_paths=True,show_time=True)
 score2=dtModel2.assess(test_y1,result2)
 print('\nC4.5 test score: %f'%score2)
 
 #离散特征
 #训练决策树
 dtModel2_2=dt.DecisionTree(model_type='c4.5')
-deciTree2_2=dtModel2_2.fit(X1_,y1,output=True)
+deciTree2_2=dtModel2_2.fit(X1_,y1,output=True,show_time=True)
 dtModel2_2.plot()
 #dtModel2_2.print_nodes()
 #预测
-result2_2=dtModel2_2.predict(test_X1_)
+result2_2=dtModel2_2.predict(test_X1_,show_time=True)
 score2_2=dtModel2_2.assess(test_y1,result2_2)
 print('\nC4.5 test score: %f'%score2_2)
 
 #剪枝测试(pep)
-tree2_pruned=dtModel2.pruning(mode='pep',return_tree=True)
+tree2_pruned=dtModel2.pruning(mode='pep',return_tree=True,show_time=True)
 dtModel2.plot(tree=tree2_pruned)
-result2_pruned=dtModel2.predict(X1,tree=tree2_pruned)
+result2_pruned=dtModel2.predict(X1,tree=tree2_pruned,show_time=True)
 score2_pruned=dtModel2.assess(y1,result2_pruned)
 print('\nC4.5 train score after pruning: %f'%score2_pruned)
-result2_pruned=dtModel2.predict(test_X1,tree=tree2_pruned)
+result2_pruned=dtModel2.predict(test_X1,tree=tree2_pruned,show_time=True)
 score2_pruned=dtModel2.assess(test_y1,result2_pruned)
 print('\nC4.5 test score after pruning: %f'%score2_pruned)
 print('\nnodes_n change after pruning: %d -> %d'%
@@ -116,35 +116,36 @@ print('\nnodes_n change after pruning: %d -> %d'%
 #连续特征
 #训练决策树
 dtModel3=dt.DecisionTree(model_type='cart_c')
-deciTree3=dtModel3.fit(X1,y1,output=True)
+deciTree3=dtModel3.fit(X1,y1,output=True,show_time=True)
 dtModel3.plot()
 #dtModel3.print_nodes()
 #预测
-result3=dtModel3.predict(X1)
+result3=dtModel3.predict(X1,show_time=True)
 score3=dtModel3.assess(y1,result3)
 print('\nCART(Classifier) train score: %f'%score3)
-result3=dtModel3.predict(test_X1)
+result3=dtModel3.predict(test_X1,show_time=True)
 score3=dtModel3.assess(test_y1,result3)
 print('\nCART(Classifier) test score: %f'%score3)
 
 #离散特征
 #训练决策树
 dtModel3_2=dt.DecisionTree(model_type='cart_c')
-deciTree3_2=dtModel3_2.fit(X1_,y1,output=True)
+deciTree3_2=dtModel3_2.fit(X1_,y1,output=True,show_time=True)
 dtModel3_2.plot()
 #dtModel3_2.print_nodes()
 #预测
-result3_2=dtModel3_2.predict(test_X1_)
+result3_2=dtModel3_2.predict(test_X1_,show_time=True)
 score3_2=dtModel3_2.assess(test_y1,result3_2)
 print('\nCART(Classifier) test score: %f'%score3_2)
 
 #剪枝测试(ccp)
-tree3_pruned=dtModel3.pruning(test_X1,test_y1,mode='ccp',return_tree=True)
+tree3_pruned=dtModel3.pruning(test_X1,test_y1,mode='ccp',
+                              return_tree=True,show_time=True)
 dtModel3.plot(tree=tree3_pruned)
-result3_pruned=dtModel3.predict(X1,tree=tree3_pruned)
+result3_pruned=dtModel3.predict(X1,tree=tree3_pruned,show_time=True)
 score3_pruned=dtModel3.assess(y1,result3_pruned)
 print('\nCART(Classifier) train score after pruning: %f'%score3_pruned)
-result3_pruned=dtModel3.predict(test_X1,tree=tree3_pruned)
+result3_pruned=dtModel3.predict(test_X1,tree=tree3_pruned,show_time=True)
 score3_pruned=dtModel3.assess(test_y1,result3_pruned)
 print('\nCART(Classifier) test score after pruning: %f'%score3_pruned)
 print('\nnodes_n change after pruning: %d -> %d'%
@@ -229,14 +230,14 @@ X2=X2.round(4)
 #   由于生成的树较为复杂，不建议绘图观察
 #训练决策树
 dtModel5=dt.DecisionTree(model_type='cart_r',depth_max=None)
-deciTree5=dtModel5.fit(X2,y2,output=True)
+deciTree5=dtModel5.fit(X2,y2,output=True,show_time=True)
 #dtModel5.plot()
 #dtModel5.print_nodes()
 #预测
-result5=dtModel5.predict(X2)
+result5=dtModel5.predict(X2,show_time=True)
 score5=dtModel5.assess(y2,result5)
 print('\nCART(Regressor) train score: %f'%score5)
-result5=dtModel5.predict(test_X2)
+result5=dtModel5.predict(test_X2,show_time=True)
 score5=dtModel5.assess(test_y2,result5)
 print('\nCART(Regressor) test score: %f'%score5)
 
@@ -245,12 +246,13 @@ dtModel5.save_tree('D:\\Model\\deciTree2.txt')
 dtModel5.read_tree('D:\\Model\\deciTree2.txt')
 
 #剪枝测试(ccp)
-tree5_pruned=dtModel5.pruning(test_X2,test_y2,mode='ccp',return_tree=True)
+tree5_pruned=dtModel5.pruning(test_X2,test_y2,mode='ccp',
+                              return_tree=True,show_time=True)
 #dtModel5.plot(tree=tree5_pruned)
-result5_pruned=dtModel5.predict(X2,tree=tree5_pruned)
+result5_pruned=dtModel5.predict(X2,tree=tree5_pruned,show_time=True)
 score5_pruned=dtModel5.assess(y2,result5_pruned)
 print('\nCART(Regressor) train score after pruning: %f'%score5_pruned)
-result5_pruned=dtModel5.predict(test_X2,tree=tree5_pruned)
+result5_pruned=dtModel5.predict(test_X2,tree=tree5_pruned,show_time=True)
 score5_pruned=dtModel5.assess(test_y2,result5_pruned)
 print('\nCART(Regressor) test score after pruning: %f'%score5_pruned)
 print('\nnodes_n change after pruning: %d -> %d'%

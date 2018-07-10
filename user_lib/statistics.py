@@ -98,7 +98,7 @@ def accuracy(y,p_y,return_dist=False,classes=None):
     '''
     y: 观测值，Series或narray(m,1)类型
     p_y: 预测值，Series或narray(m,1)类型
-    return_dist: 是否返回预测分布，bool类型，默认False
+    return_dist: 是否返回预测分布(也称作混淆矩阵)，bool类型，默认False
     classes: 类标签，list(str)类型，None是从输入中提取，默认为None
     '''
     cp=pd.DataFrame()

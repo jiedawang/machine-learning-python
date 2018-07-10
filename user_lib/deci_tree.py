@@ -511,7 +511,7 @@ def sqr_err(array):
 #条件平方误差
 '''
 x:用于分裂的特征列,narray类型
-y:需要求平方误差的分类列,narray类型
+y:需要求平方误差的观测值列,narray类型
 return> 0:平方误差，float类型
 '''
 @nb.jit(nopython=True,cache=True)
@@ -529,7 +529,7 @@ def con_sqr_err(x,y,continuity=False,value=[]):
 #注：适用于c4.5,cart
 '''
 x:用于分裂的特征列，连续变量，narray类型
-y:分类列，narray类型
+y:观测值列，narray类型
 criterion:衡量标准，1/2/3->entropy/gini/square_error，int类型
 return> 0:最优分裂阈值，float类型 
         1:所有可能的分裂阈值的数量，int类型
@@ -593,7 +593,7 @@ def filter_thresholds(x,y,criterion):
 #注：适用于cart
 '''
 x:用于分裂的特征列,Series类型
-y:分类列,Series类型
+y:观测值列,Series类型
 criterion:衡量标准，2/3->gini/square_error，int类型
 simplify:简化模式，True时使用ovr(one vs rest)代表每个取值与其他值构成一种二分组合
     False时mvm(many vs many)代表无限制的所有二分组合，在取值个数多时该模式会非常耗时
@@ -657,51 +657,54 @@ class DecisionTree:
                  'cart_r'->回归，离散或连续特征+连续输出，
                  默认值'cart_c'
     depth_max : 最大深度，int类型(>=1)，None表示无限制，默认值10
-    split_min_n : 分裂所需最少样本数，int类型(>=2)，默认值2
-    leaf_min_n : 叶节点所需最少样本数，int类型(>=1)，默认值1
-    feature_use : 每次使用的特征数量，str/float/int类型
+    split_sample_n : 分裂所需最少样本数，int类型(>=2)，默认值2
+    leaf_sample_n : 叶节点所需最少样本数，int类型(>=1)，默认值1
+    features_use : 每次使用的特征数量，str/float/int类型，默认值'sqrt'
                   'all'->全量，
                   'sqrt'->总数量的平方根，
                   'log2'->总数量的2的对数，
                   float->总数量的相应比例，区间(0.0,1.0)，
                   int->固定数量，区间[1,feature_num]，
-                  默认值'sqrt'
-    feature_reuse : 是否允许一个特征重复使用，bool类型，默认值False
+                  注意，即使使用'all'，生成的树依旧可能不同，
+                  原因是在选取最优划分特征时，可能会出现多个特征都是最优划分的情况，
+                  选用不同特征生成的树不同，准确率也不一样，
+                  所以在遍历特征时保留了顺序上的随机性，以提供取到最优树的可能
+    features_reuse : 是否允许一个特征重复使用，bool类型，默认值False
     ----------
     '''
     
     #构造函数，主要作用是校验和保存配置变量
-    def __init__(self,model_type='cart_c',depth_max=10,split_min_n=2,
-                 leaf_min_n=1,feature_use='sqrt',feature_reuse=False):
+    def __init__(self,model_type='cart_c',depth_max=10,split_sample_n=2,
+                 leaf_sample_n=1,features_use='sqrt',features_reuse=False):
         #校验参数类型和取值
         #check_type(变量名，变量类型，要求类型)
         #check_limit(变量名，限制条件，正确取值提示)
         check_type('model_type',type(model_type),type(''))
-        check_type('split_min_n',type(split_min_n),type(0))
-        check_type('leaf_min_n',type(leaf_min_n),type(0))
-        check_type('feature_reuse',type(feature_reuse),type(True))
+        check_type('split_sample_n',type(split_sample_n),type(0))
+        check_type('leaf_sample_n',type(leaf_sample_n),type(0))
+        check_type('features_reuse',type(features_reuse),type(True))
         if type(depth_max)!=type(None):
             check_type('depth_max',type(depth_max),type(0))
-        check_type('feature_use',type(feature_use),[type(0),type(1.0),type('')])
+        check_type('features_use',type(features_use),[type(0),type(1.0),type('')])
         type_list=['id3','c4.5','cart_c','cart_r']
         model_type=model_type.lower()
         check_limit('model_type',model_type in type_list,str(type_list))
-        check_limit('split_min_n',split_min_n>=2,'value>=2')
-        check_limit('leaf_min_n',leaf_min_n>=1,'value>=1')
+        check_limit('split_sample_n',split_sample_n>=2,'value>=2')
+        check_limit('leaf_sample_n',leaf_sample_n>=1,'value>=1')
         required="float(>0.0,<1.0),int(>=1,<=feature_n),str(['all','sqrt','log2'])"
-        if type(feature_use)==type(''):
-            check_limit('feature_use',feature_use in ['all','sqrt','log2'],required)
-        elif type(feature_use)==type(0):
-            check_limit('feature_use',feature_use>=1,required)
-        elif type(feature_use)==type(0.0):
-            check_limit('feature_use',(feature_use>0.0)&(feature_use<1.0),required)
+        if type(features_use)==type(''):
+            check_limit('features_use',features_use in ['all','sqrt','log2'],required)
+        elif type(features_use)==type(0):
+            check_limit('features_use',features_use>=1,required)
+        elif type(features_use)==type(0.0):
+            check_limit('features_use',(features_use>0.0)&(features_use<1.0),required)
         #保存参数
         self.model_type=model_type
         self.depth_max=depth_max
-        self.split_min_n=split_min_n
-        self.leaf_min_n=leaf_min_n
-        self.feature_reuse=feature_reuse
-        self.feature_use=feature_use
+        self.split_sample_n=split_sample_n
+        self.leaf_sample_n=leaf_sample_n
+        self.features_reuse=features_reuse
+        self.features_use=features_use
 
     #最优特征选择(ID3)
     #选择依据：信息增益
@@ -715,12 +718,12 @@ class DecisionTree:
     '''
     def choose_feature_by_id3_(self,X,y):
         #随机抽取特征
-        feature_use_n=self.feature_use_n
+        features_use_n=self.features_use_n
         feature_n=len(X.columns)
-        if feature_use_n>feature_n:
-            feature_use_n=feature_n
+        if features_use_n>feature_n:
+            features_use_n=feature_n
         features_idx=pd.Series(range(feature_n))
-        features_idx=features_idx.sample(feature_use_n)
+        features_idx=features_idx.sample(features_use_n)
         #计算分裂前的信息熵
         baseEntropy=entropy(y.values)
         #初始化变量
@@ -753,12 +756,12 @@ class DecisionTree:
     '''
     def choose_feature_by_c45_(self,X,y,continuity):
         #随机抽取特征
-        feature_use_n=self.feature_use_n
+        features_use_n=self.features_use_n
         feature_n=len(X.columns)
-        if feature_use_n>feature_n:
-            feature_use_n=feature_n
+        if features_use_n>feature_n:
+            features_use_n=feature_n
         features_idx=pd.Series(range(feature_n))
-        features_idx=features_idx.sample(feature_use_n)
+        features_idx=features_idx.sample(features_use_n)
         #计算分裂前的信息熵
         baseEntropy=entropy(y.values)
         #初始化变量
@@ -806,12 +809,12 @@ class DecisionTree:
     '''
     def choose_feature_by_cart_c_(self,X,y,continuity):
         #随机抽取特征
-        feature_use_n=self.feature_use_n
+        features_use_n=self.features_use_n
         feature_n=len(X.columns)
-        if feature_use_n>feature_n:
-            feature_use_n=feature_n
+        if features_use_n>feature_n:
+            features_use_n=feature_n
         features_idx=pd.Series(range(feature_n))
-        features_idx=features_idx.sample(feature_use_n)
+        features_idx=features_idx.sample(features_use_n)
         #初始化变量
         bestGini=gini(y.values)
         bestFeatureIdx=-1
@@ -844,7 +847,7 @@ class DecisionTree:
     #回归树输出连续数值
     '''
     X:所有参与选择的特征列，DataFrame类型
-    y:分类列，Series类型
+    y:观测值列，Series类型
     continuity:连续性，list(bool)类型
     return> 0:最优分裂特征的索引，int类型 
             1:最优方差，float类型
@@ -852,12 +855,12 @@ class DecisionTree:
     '''
     def choose_feature_by_cart_r_(self,X,y,continuity):
         #随机抽取特征
-        feature_use_n=self.feature_use_n
+        features_use_n=self.features_use_n
         feature_n=len(X.columns)
-        if feature_use_n>feature_n:
-            feature_use_n=feature_n
+        if features_use_n>feature_n:
+            features_use_n=feature_n
         features_idx=pd.Series(range(feature_n))
-        features_idx=features_idx.sample(feature_use_n)
+        features_idx=features_idx.sample(features_use_n)
         #初始化变量
         bestErr=sqr_err(y.values)
         bestFeatureIdx=-1
@@ -923,7 +926,7 @@ class DecisionTree:
     #根据第i列特征分裂数据集
     '''
     X:当前所有的特征列，DataFrame类型
-    y:分类列，Series类型
+    y:观测值列，Series类型
     continuity:连续性，bool类型
     value:分裂依据，二分裂时使用，连续数据->float类型/离散数据->list类型
     return> 0:X分裂后的集合，list(DataFrame) 
@@ -955,7 +958,7 @@ class DecisionTree:
                 min_sample_n=min(len(result_y[0]),len(result_y[1]))
             else:
                 #去重得到特征值列表
-                values=x.sort_values().drop_duplicates().tolist()
+                values=x.drop_duplicates().sort_values().tolist()
                 #根据不同的特征值进行分割
                 result_X,result_y=[],[]
                 min_sample_n=len(y)
@@ -971,7 +974,7 @@ class DecisionTree:
     #叶节点判断(仅先行判断的条件，非全部条件)
     '''
     X:当前所有的特征列，DataFrame类型
-    y:分类列，Series类型
+    y:观测值列，Series类型
     depth:当前深度，int类型
     return> 0:是否叶节点，bool类型
     '''
@@ -988,7 +991,7 @@ class DecisionTree:
                 print('<LeafNode> lack of feature')
             return True
         #数据集过小，不继续分裂
-        if len(X)<self.split_min_n:
+        if len(X)<self.split_sample_n:
             if self.build_proc==True:
                 print('<LeafNode> samples too small')
             return True
@@ -1007,13 +1010,13 @@ class DecisionTree:
     #构建树
     '''
     X:当前所有的特征列，DataFrame类型
-    y:分类列，Series类型
+    y:观测值列，Series类型
     return> 0:决策树，Tree类型
     '''
     def build_(self,X,y):
         #初始化决策树
         deciTree=Tree()
-        #等待处理的数据队列：特征，分类，连续性，父节点id，深度，
+        #等待处理的数据队列：特征，观测值，连续性，父节点id，深度，
         #                   分裂特征名,约束方式，分裂值
         queue=[(X,y,self.continuity_X,-1,0,None,None,None)]
         while len(queue)>0:
@@ -1078,7 +1081,7 @@ class DecisionTree:
                                 continuity_[bestFeatureIdx],bestSplit)
                 self.time_cost['split data']+=time.clock()-start0
                 #下属叶节点样本数存在小于设定值的，将该节点设为叶节点，否则内节点
-                if min_sample_n<self.leaf_min_n:
+                if min_sample_n<self.leaf_sample_n:
                     start0=time.clock()
                     node=Node(parent=parent,sample_n=len(y_),error=error,is_leaf=True,
                     feature=feature,limit=limit,value=value,output=output)
@@ -1090,7 +1093,7 @@ class DecisionTree:
                               feature=feature,limit=limit,value=value,output=output)
                     nodeId=deciTree.add_node(node)
                     self.time_cost['add node']+=time.clock()-start0
-                    if self.feature_reuse==False:
+                    if self.features_reuse==False:
                         continuity__=continuity_.copy()
                         continuity__.pop(bestFeatureIdx)
                         #将分裂后的数据集加入队列继续处理
@@ -1109,62 +1112,79 @@ class DecisionTree:
                         self.time_cost['queue operate']+=time.clock()-start0
         return deciTree
     
-    #fit方法的输入校验   
-    def fit_check_input_(self,X,y):
+    #X输入校验
+    def check_input_X_(self,X,name='X',to_index=False,return_source=False):
         #类型校验
-        check_type('X',type(X),type(pd.DataFrame()))
-        check_type('y',type(y),type(pd.Series()))
-        #校验X,y输入是否匹配
-        check_index_match(X,y,'X','y')
+        check_type(name,type(X),type(pd.DataFrame()))
         #连续性判断
-        continuity_X=dp.get_continuity(X,'X')
-        continuity_y=dp.get_continuity(y,'y')
+        continuity_X=dp.get_continuity(X,name)
         #ID3不支持连续特征
         if self.model_type=='id3':
             if True in continuity_X:
                 raise TypeError('ID3 does not support continuous features')
+        #视情况将X转换为数值索引(numba的需要)
+        if to_index==True:
+            if return_source==True:
+                X0=X.copy()
+            if False not in continuity_X:
+                mapping_X=None
+            else:
+                cols=[]
+                for i in range(len(continuity_X)):
+                    if continuity_X[i]==False:
+                        cols.append(X.columns[i])
+                X,mapping_X=dp.label_to_index(X,cols)
+            if return_source==True:
+                return X,continuity_X,mapping_X,X0
+            else:
+                return X,continuity_X,mapping_X
+        else:
+            return X,continuity_X
+        
+    #y输入校验
+    def check_input_y_(self,y,name='y',to_index=False,return_source=False):
+        #类型校验
+        check_type(name,type(y),type(pd.Series()))
+        #连续性判断
+        continuity_y=dp.get_continuity(y,name)
         #cart回归的y必须是数值型,其他分类树的y转换为str类型
         if self.model_type=='cart_r':
             if continuity_y==False:
-                raise TypeError('CART Regressor only support y for numeric')
+                raise TypeError('CART Regressor only support %s for numeric'%name)
         else:
             y=y.astype('str')
-        #确定每次分裂考虑的特征数量上限
-        feature_n=len(X.columns)
-        if type(self.feature_use)==type(''):
-            if self.feature_use=='all':
-                feature_use_n=feature_n
-            elif self.feature_use=='sqrt':
-                feature_use_n=np.sqrt(feature_n)
-            elif self.feature_use=='log2':
-                feature_use_n=np.log2(feature_n)
-        elif type(self.feature_use)==type(0):
-            if self.feature_use>feature_n:
-                feature_use_n=feature_n
+        #视情况将y转换为数值索引(numba的需要)
+        if to_index==True:
+            if return_source==True:
+                y0=y.copy()
+            if self.model_type=='cart_r':
+                mapping_y=None
             else:
-                feature_use_n=self.feature_use
-        elif type(self.feature_use)==type(0.0):
-            feature_use_n=self.feature_use*feature_n
-        #视情况将X,y转换为数值索引(numba的需要)
-        if False not in continuity_X:
-            mapping_X=None
+                y,mapping_y=dp.label_to_index(y,[y.name])
+            if return_source==True:
+                return y,continuity_y,mapping_y,y0
+            else:
+                return y,continuity_y,mapping_y
         else:
-            cols=[]
-            for i in range(len(continuity_X)):
-                if continuity_X[i]==False:
-                    cols.append(X.columns[i])
-            X,mapping_X=dp.label_to_index(X,cols)
-        if self.model_type=='cart_r':
-            mapping_y=None
-        else:
-            y,mapping_y=dp.label_to_index(y,[y.name])
-        #保存生成参数
-        self.continuity_X=continuity_X
-        self.continuity_y=continuity_y
-        self.mapping_X=mapping_X
-        self.mapping_y=mapping_y
-        self.feature_use_n=int(feature_use_n)
-        return X,y
+            return y,continuity_y
+    
+    #计算每次分裂使用的特征数量上限
+    def compute_features_use_n_(self,feature_n,features_use):
+        if type(self.features_use)==type(''):
+            if self.features_use=='all':
+                features_use_n=feature_n
+            elif self.features_use=='sqrt':
+                features_use_n=np.sqrt(feature_n)
+            elif self.features_use=='log2':
+                features_use_n=np.log2(feature_n)
+        elif type(self.features_use)==type(0):
+            if self.features_use>feature_n:
+                features_use_n=feature_n
+            else:
+                features_use_n=self.features_use
+        elif type(self.features_use)==type(0.0):
+            features_use_n=self.features_use*feature_n
+        return int(features_use_n)
     
     #拟合
     def fit(self,X,y,output=False,show_time=False,
@@ -1180,7 +1200,7 @@ class DecisionTree:
         Parameters
         ----------
         X: 所有的特征列，DataFrame类型
-        y: 分类列，Series类型
+        y: 观测值列，Series类型
         output: 是否输出拟合好的树，bool类型，默认值False
         show_time: 是否显示耗时，bool类型，默认值False
         build_proc: 反馈构建过程，bool类型，默认值False
@@ -1194,12 +1214,18 @@ class DecisionTree:
         '''
         start = time.clock()
         #输入校验
-        check_type('output',type(output),type(True))
-        check_type('show_time',type(show_time),type(True))
-        check_type('build_proc',type(build_proc),type(True))
         check_type('check_input',type(check_input),type(True))
         if check_input==True:
-            X,y=self.fit_check_input_(X,y)
+            check_type('output',type(output),type(True))
+            check_type('show_time',type(show_time),type(True))
+            check_type('build_proc',type(build_proc),type(True))
+            #校验X,y输入
+            X,self.continuity_X,self.mapping_X=self.check_input_X_(X,to_index=True)
+            y,self.continuity_y,self.mapping_y=self.check_input_y_(y,to_index=True)
+            #校验X,y输入是否匹配
+            check_index_match(X,y,'X','y')
+            #计算每次分裂使用的特征数量上限
+            self.features_use_n=self.compute_features_use_n_(len(X.columns),self.features_use)
         self.time_cost=pd.Series(np.zeros(7),name='time cost',
                 index=['total cost','queue operate','check input',
                        'compute best split','compute node attr',
@@ -1215,7 +1241,7 @@ class DecisionTree:
             return self.tree
         
     #决策路径
-    def decition_path(self,dr,tree=None,return_path=False):
+    def decition_path(self,dr,tree=None,return_path=False,check_input=True):
         '''\n
         Function: 获取单行数据的决策路径
         
@@ -1228,6 +1254,7 @@ class DecisionTree:
         tree: 决策树，Tree类型，默认调用内部缓存的树
         return_path: 是否仅以返回值形式给到路径，bool类型，默认值False，
                      此模式只返回节点id列表，不包含完整信息
+        check_input: 是否进行输入校验，bool类型，默认值True
         ----------
         
         Print
@@ -1241,17 +1268,20 @@ class DecisionTree:
         -----
         '''
         if type(tree)==type(None):
-            tree=self.tree
-        else:
-            check_type('tree',type(tree),type(Tree()))
+            tree=self.tree     
         #校验输入
-        check_type('return_path',type(return_path),type(True))
-        check_type('dr',type(dr),type(pd.Series()))
-        check_feats_match(dr.index,tree.features,'dr','tree',mode='right')
+        check_type('check_input',type(check_input),type(True))
+        if check_input==True:
+            check_type('tree',type(tree),type(Tree()))
+            check_type('return_path',type(return_path),type(True))
+            check_type('dr',type(dr),type(pd.Series()))
+            check_feats_match(dr.index,tree.features,'dr','tree',mode='right')
         #准备访问的节点
         iloc=0
         queue=[tree.nodes[0]]
-        print(tree.nodes[0].info_to_str())
+        path,info=[],[]
+        info.append(tree.nodes[0].info_to_str())
+        path.append(0)
         #直到没有等待访问的节点时结束
         while len(queue)>0:
             node=queue.pop(0)
@@ -1274,14 +1304,19 @@ class DecisionTree:
                         match_flag=True
                 #打印匹配上的节点信息，如果是内节点再加入待访问队列
                 if match_flag==True:
-                    print(child.info_to_str())
+                    info.append(child.info_to_str())
+                    path.append(childId)
                     if child.is_leaf==False:
                         queue.append(child)
                     break
-        return
+        if return_path==True:
+            return path
+        else:
+            for row in info:
+                print(row)
     
     #流至节点
-    def flow_to_node(self,X,node_id,tree=None):
+    def flow_to_node(self,X,node_id,tree=None,check_input=True):
         '''\n
         Function: 获取数据集流至指定节点处的子集
         
@@ -1290,6 +1325,7 @@ class DecisionTree:
         X: 所有的特征列，DataFrame类型
         node_id: 节点Id，int类型
         tree: 决策树，Tree类型，默认调用内部缓存的树
+        check_input: 是否进行输入校验，bool类型，默认值True
         ----------
         
         Returns
@@ -1299,12 +1335,13 @@ class DecisionTree:
         '''
         if type(tree)==type(None):
             tree=self.tree
-        else:
-            check_type('tree',type(tree),type(Tree()))
         #校验输入
-        check_type('node_id',type(node_id),type(0))
-        check_type('X',type(X),type(pd.DataFrame()))
-        check_feats_match(X.columns,tree.features,'X','tree',mode='right')
+        check_type('check_input',type(check_input),type(True))
+        if check_input==True:
+            check_type('tree',type(tree),type(Tree()))
+            check_type('node_id',type(node_id),type(0))
+            check_type('X',type(X),type(pd.DataFrame()))
+            check_feats_match(X.columns,tree.features,'X','tree',mode='right')
         X_=X.copy()
         path_nodes=tree.get_path(node_id,return_nodes=True)
         for node in path_nodes:
@@ -1321,7 +1358,8 @@ class DecisionTree:
         return X_
     
     #预测
-    def predict(self,X,tree=None,return_proba=False,return_paths=False,show_time=False):
+    def predict(self,X,tree=None,return_proba=False,return_paths=False,
+                show_time=False,check_input=True):
         '''\n
         Function: 使用输入数据和树进行预测，没有输入树时使用内部缓存的树
         
@@ -1333,26 +1371,27 @@ class DecisionTree:
         return_paths: 是否返回决策路径，bool类型，默认值False
                      （路径信息以str类型返回，可转换为list使用）
         show_time: 是否显示耗时，bool类型，默认值False
+        check_input: 是否进行输入校验，bool类型，默认值True
         ----------
         
         Returns
         -------
-        0: 预测的分类/分类概率，Series/DataFrame类型
+        0: 预测的分类/分类概率/回归值，Series/DataFrame类型
         1: 所有数据最终抵达的节点和决策路径，DataFrame类型
         -------
         '''
+        start = time.clock()
         if type(tree)==type(None):
             tree=self.tree
-        else:
-            check_type('tree',type(tree),type(Tree()))
-        start = time.clock()
         #校验参数
-        check_type('tree',type(tree),type(Tree()))
-        check_type('return_proba',type(return_proba),type(True))
-        check_type('return_paths',type(return_paths),type(True))
-        check_type('show_time',type(show_time),type(True))
-        check_type('X',type(X),type(pd.DataFrame()))
-        check_feats_match(X.columns,tree.features,'X','tree',mode='right')
+        check_type('check_input',type(check_input),type(True))
+        if check_input==True:
+            check_type('tree',type(tree),type(Tree()))
+            check_type('return_proba',type(return_proba),type(True))
+            check_type('return_paths',type(return_paths),type(True))
+            check_type('show_time',type(show_time),type(True))
+            X,continuity_X=self.check_input_X_(X)
+            check_feats_match(X.columns,tree.features,'X','tree',mode='right')
         #数据集大小
         n=len(X)
         #数据流，记录已达到节点
@@ -1361,7 +1400,7 @@ class DecisionTree:
         if tree.mode=='Classifier':
             #定义存放分类结果的DataFrame
             p_y_=pd.DataFrame(
-                    np.zeros(n*len(tree.classes)).reshape(n,len(tree.classes)),
+                    np.zeros((n,len(tree.classes))),
                     index=X.index,columns=tree.classes)
         else:
             #定义存放回归值的Series
@@ -1411,7 +1450,7 @@ class DecisionTree:
             paths=pd.DataFrame()
             paths['reach']=flow
             paths['path']=''
-            reach_nodes=flow.sort_values().drop_duplicates().astype('int').tolist()
+            reach_nodes=flow.drop_duplicates().sort_values().astype('int').tolist()
             for nodeId in reach_nodes:
                 path=tree.get_path(nodeId)
                 paths.loc[paths['reach']==nodeId,'path']=str(path)
@@ -1421,7 +1460,7 @@ class DecisionTree:
             return p_y_,paths
     
     #评估
-    def assess(self,y,p_y,mode=None):
+    def assess(self,y,p_y,mode=None,check_input=True):
         '''\n
         Function: 使用输入的观测值和预测值进行模型评估
         
@@ -1430,10 +1469,11 @@ class DecisionTree:
         
         Parameters
         ----------
-        y:实际的分类，Series类型
-        p_y:预测的分类，Series类型
+        y:观测值，Series类型
+        p_y:预测值，Series类型
         mode:模式，str类型，默认使用内部缓存树的属性，
              'Classifier'->分类，'Regressor'->回归
+        check_input: 是否进行输入校验，bool类型，默认值True
         ----------
         
         Returns
@@ -1443,18 +1483,16 @@ class DecisionTree:
         '''
         if type(mode)==type(None):
             mode=self.tree.mode
-        else:
+        #校验输入
+        check_type('check_input',type(check_input),type(True))
+        if check_input==True:
             mode_list=['Classifier','Regressor']
             check_limit('mode',mode in mode_list,str(mode_list))
-        #校验输入
-        check_type('p_y',type(p_y),type(pd.Series()))
-        check_type('y',type(y),type(pd.Series()))
-        check_index_match(y,p_y,'y','p_y')
+            y,continuity_y=self.check_input_y_(y,name='y')
+            p_y,continuity_p_y=self.check_input_y_(p_y,name='p_y')
+            check_index_match(y,p_y,'y','p_y')
         #分类模式求准确率，回归模式求R2
         if mode=='Classifier':
-            if type(y.iloc[0])!=type(''):
-                #print('it is recommended to transform y as str type')
-                y=y.astype('str')
             return stats.accuracy(y,p_y)
         elif mode=='Regressor':
             return stats.r_sqr(y,p_y)
@@ -1492,7 +1530,7 @@ class DecisionTree:
     #降低错误率剪枝 Reduced-Error Pruning
     '''
     test_X:测试数据集全部特征列，DataFrame类型
-    test_y:测试数据集全部分类列，Series类型
+    test_y:测试数据集全部观测值列，Series类型
     tree:决策树，Tree类型
     return_subtrees:是否返回剪枝过程的子树序列，bool类型
     return> 0:剪枝后的决策树，Tree类型/剪枝过程的子树序列+准确率+节点id，list(Tree,int,int)类型
@@ -1565,7 +1603,7 @@ class DecisionTree:
     #代价复杂度剪枝 Cost-Complexity Pruning
     '''
     test_X:测试数据集全部特征列，DataFrame类型
-    test_y:测试数据集全部分类列，Series类型
+    test_y:测试数据集全部观测值列，Series类型
     tree:决策树，Tree类型
     return_subtrees:是否返回剪枝过程的子树序列，bool类型
     return> 0:剪枝后的决策树，Tree类型/剪枝过程的子树序列+准确率+节点id，list(Tree,int,int)类型
@@ -1616,7 +1654,8 @@ class DecisionTree:
             return best_tree
                 
     #剪枝
-    def pruning(self,test_X=None,test_y=None,tree=None,mode='ccp',return_tree=False,show_time=True):
+    def pruning(self,test_X=None,test_y=None,tree=None,mode='ccp',
+                return_tree=False,show_time=False,check_input=True):
         '''\n
         Function: 对输入树进行剪枝
         
@@ -1625,13 +1664,14 @@ class DecisionTree:
         Parameters
         ----------
         test_X: 测试数据集全部特征列，DataFrame类型，默认值None
-        test_y: 测试数据集全部分类列，Series类型，默认值None
+        test_y: 测试数据集全部观测值列，Series类型，默认值None
         tree: 决策树，Tree类型，默认调用内部缓存的树
         mode: 模式，str类型，默认值'ccp'，
               'rep'->降低错误率剪枝
               'pep'->悲观剪枝
               'ccp'->代价复杂度剪枝
         return_tree: 是否直接返回树而不替换内部缓存的树，bool类型，默认值False
+        check_input: 是否进行输入校验，bool类型，默认值True
         ----------
         
         Returns
@@ -1642,19 +1682,21 @@ class DecisionTree:
         start = time.clock()
         if type(tree)==type(None):
             tree=self.tree
-        else:
-            check_type('tree',type(tree),type(Tree()))
         #参数校验
-        mode_list=['rep','pep','ccp']
-        check_type('mode',type(mode),type(''))
-        mode=mode.lower()
-        check_limit('mode',mode in mode_list,str(mode_list))
-        if mode in ['rep','ccp']:
-            #校验输入
-            check_type('test_X',type(test_X),type(pd.DataFrame()))
-            check_type('test_y',type(test_y),type(pd.Series()))
-            check_index_match(test_X,test_y,'test_X','test_y')
-            check_feats_match(test_X.columns,tree.features,'test_X','tree',mode='right')
+        check_type('check_input',type(check_input),type(True))
+        if check_input==True:
+            check_type('tree',type(tree),type(Tree()))
+            mode_list=['rep','pep','ccp']
+            check_type('mode',type(mode),type(''))
+            mode=mode.lower()
+            check_limit('mode',mode in mode_list,str(mode_list))
+            if mode in ['rep','ccp']:
+                #校验输入
+                test_X,continuity_X=self.check_input_X_(test_X,'test_X')
+                test_y,continuity_y=self.check_input_y_(test_y,'test_y')
+                #校验X,y输入是否匹配
+                check_index_match(test_X,test_y,'test_X','test_y')
+                check_feats_match(test_X.columns,tree.features,'test_X','tree',mode='right')
         #剪枝
         if mode=='rep':
             tree_=self.pruning_rep_(test_X,test_y,tree)
