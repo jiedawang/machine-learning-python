@@ -122,3 +122,22 @@ def accuracy(y,p_y,return_dist=False,classes=None):
                                columns='y_'+pd.Series(values).astype('str'),
                                index='p_'+pd.Series(values).astype('str'))
         return a,pred_dist
+    
+#对max函数的光滑近似函数
+#该函数的梯度为softmax函数
+#界限：max(x)<=LSE(x)<max(x)+log(len(x))
+#当除了一个参数之外的所有参数接近负无穷大时，满足下限，
+#并且当所有参数相等时满足上限
+def logsumexp(fx,axis=1):
+    return np.log(np.sum(np.e**fx,axis=axis))
+
+#归一化指数函数
+def softmax(fx,axis=1):
+    exp=np.e**fx
+    if axis==1:
+        return (exp.T/exp.sum(axis=1)).T
+    elif axis==0:
+        return exp/exp.sum(axis=0)
+    else:
+        raise ValueError('support axis for 0 or 1')
+    

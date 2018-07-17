@@ -44,21 +44,21 @@ test_X_=dp.minmax_scaler(test_X,ref)
 print('\n\n<拟合时间对比>')
 #1：正规方程法
 print('\n正规方程法：')
-linear2=rg.LinearRegression(fit_mode='ne')
-theta_by_ne=linear2.fit(X_,y,show_time=True,output=True)
+linear1=rg.LinearRegression(fit_mode='ne')
+theta_by_ne=linear1.fit(X_,y,show_time=True,output=True)
 
 #2：梯度下降法
 print('\n梯度下降法：')
 #最大迭代次数,学习率
 iter_max,a=1000,0.1
-linear1=rg.LinearRegression(fit_mode='sgd',a=a,iter_max=iter_max)
+linear2=rg.LinearRegression(fit_mode='sgd',a=a,iter_max=iter_max)
 #拟合
-theta_by_gd=linear1.fit(X_,y,show_time=True,output=True)
-theta_h=linear1.theta_h
-cost_h=linear1.cost_h
+theta_by_gd=linear2.fit(X_,y,show_time=True,output=True)
+theta_h=linear2.theta_h
+cost_h=linear2.cost_h
 
 #cost,theta变化曲线
-linear1.plot_change_h()
+linear2.plot_change_h()
 
 #预测
 result1=linear1.predict(test_X_)
@@ -68,11 +68,11 @@ score2=linear2.assess(test_y,result2)
 
 print('\n\n<拟合结果对比>')
 print('\n正规方程法：')
-print('train score：%f'%linear2.score)
-print('test score：%f'%score2)
-print('\n梯度下降法：')
 print('train score：%f'%linear1.score)
 print('test score：%f'%score1)
+print('\n梯度下降法：')
+print('train score：%f'%linear2.score)
+print('test score：%f'%score2)
 
 #与sklearn对照
 from sklearn.linear_model import LinearRegression

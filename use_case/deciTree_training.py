@@ -31,7 +31,7 @@ data=pd.DataFrame(dataValues,columns=labels)
 X=data.iloc[:,:(len(data.columns)-1)]
 y=data.iloc[:,len(data.columns)-1]
 
-dtModel0=dt.DecisionTree(model_type='id3')
+dtModel0=dt.DecisionTree(mode='c',model_type='id3')
 deciTree0=dtModel0.fit(X,y,output=True)
 
 dtModel0.plot()
@@ -57,7 +57,7 @@ test_X1_=dp.discret(test_X1,rg)
 
 #ID3(没有处理连续特征的能力，需要预处理)
 #训练决策树
-dtModel1=dt.DecisionTree(model_type='id3')
+dtModel1=dt.DecisionTree(mode='c',model_type='id3')
 deciTree1=dtModel1.fit(X1_,y1,output=True,show_time=True)
 dtModel1.plot()
 #dtModel1.plot(start_id=4,print_loc=True)
@@ -74,13 +74,13 @@ dtModel1.read_tree('D:\\Model\\deciTree.txt')
 #C4.5
 #连续特征
 #训练决策树
-dtModel2=dt.DecisionTree(model_type='c4.5')
+dtModel2=dt.DecisionTree(mode='c',model_type='c4.5')
 deciTree2=dtModel2.fit(X1,y1,output=True,show_time=True)
 dtModel2.plot()
 #dtModel2.print_nodes()
 #预测(顺便测试一下获取决策路径)
-result2=dtModel2.predict(X1)
-score2=dtModel2.assess(y1,result2,show_time=True)
+result2=dtModel2.predict(X1,show_time=True)
+score2=dtModel2.assess(y1,result2)
 print('\nC4.5 train score: %f'%score2)
 result2,paths=dtModel2.predict(test_X1,return_paths=True,show_time=True)
 score2=dtModel2.assess(test_y1,result2)
@@ -88,7 +88,7 @@ print('\nC4.5 test score: %f'%score2)
 
 #离散特征
 #训练决策树
-dtModel2_2=dt.DecisionTree(model_type='c4.5')
+dtModel2_2=dt.DecisionTree(mode='c',model_type='c4.5')
 deciTree2_2=dtModel2_2.fit(X1_,y1,output=True,show_time=True)
 dtModel2_2.plot()
 #dtModel2_2.print_nodes()
@@ -98,6 +98,7 @@ score2_2=dtModel2_2.assess(test_y1,result2_2)
 print('\nC4.5 test score: %f'%score2_2)
 
 #剪枝测试(pep)
+#注：该剪枝方法比较容易失败
 tree2_pruned=dtModel2.pruning(mode='pep',return_tree=True,show_time=True)
 dtModel2.plot(tree=tree2_pruned)
 result2_pruned=dtModel2.predict(X1,tree=tree2_pruned,show_time=True)
@@ -115,7 +116,7 @@ print('\nnodes_n change after pruning: %d -> %d'%
 #CART分类
 #连续特征
 #训练决策树
-dtModel3=dt.DecisionTree(model_type='cart_c')
+dtModel3=dt.DecisionTree(mode='c',model_type='cart')
 deciTree3=dtModel3.fit(X1,y1,output=True,show_time=True)
 dtModel3.plot()
 #dtModel3.print_nodes()
@@ -129,7 +130,7 @@ print('\nCART(Classifier) test score: %f'%score3)
 
 #离散特征
 #训练决策树
-dtModel3_2=dt.DecisionTree(model_type='cart_c')
+dtModel3_2=dt.DecisionTree(mode='c',model_type='cart')
 deciTree3_2=dtModel3_2.fit(X1_,y1,output=True,show_time=True)
 dtModel3_2.plot()
 #dtModel3_2.print_nodes()
@@ -169,7 +170,7 @@ for pairidx,pair in enumerate(pair_enum):
         #continue
     #每次只用两个特征训练
     X1_2=X1.iloc[:,pair]
-    dtModel4=dt.DecisionTree(model_type='cart_c')
+    dtModel4=dt.DecisionTree(model_type='cart')
     dtModel4.fit(X1_2,y1)
     #dtModel4.plot()
     #绘制决策边界
@@ -208,13 +209,14 @@ end = time.clock()
 print('\ntime used for trainning:%f'%(end-start))
 print('\nsklearn train score:%f'%sk_dtModel.score(X1,y1))
 
+sk_result = sk_dtModel.predict(test_X1)
+print('\nsklearn test score:%f'%sk_dtModel.score(test_X1,test_y1))
+
 #保存模型
 from sklearn.externals import joblib
 joblib.dump(sk_dtModel, 'D:\\Model\\deciTree2.pkl')
 sk_dtModel = joblib.load('D:\\Model\\deciTree2.pkl') 
 
-sk_result = sk_dtModel.predict(test_X1)
-print('\nsklearn test score:%f'%sk_dtModel.score(test_X1,test_y1))
 
 #波士顿房价数据(连续输出)
 f = open('D:\\training_data\\used\\boston_house_price.txt')
@@ -229,7 +231,7 @@ X2=X2.round(4)
 #注：回归树的拟合和剪枝在性能上表现得比较糟糕，以后改进
 #   由于生成的树较为复杂，不建议绘图观察
 #训练决策树
-dtModel5=dt.DecisionTree(model_type='cart_r',depth_max=None)
+dtModel5=dt.DecisionTree(mode='r',model_type='cart')
 deciTree5=dtModel5.fit(X2,y2,output=True,show_time=True)
 #dtModel5.plot()
 #dtModel5.print_nodes()
@@ -246,6 +248,7 @@ dtModel5.save_tree('D:\\Model\\deciTree2.txt')
 dtModel5.read_tree('D:\\Model\\deciTree2.txt')
 
 #剪枝测试(ccp)
+#注：这个比较慢，耐心等待
 tree5_pruned=dtModel5.pruning(test_X2,test_y2,mode='ccp',
                               return_tree=True,show_time=True)
 #dtModel5.plot(tree=tree5_pruned)
@@ -278,11 +281,3 @@ print('\nsklearn train score:%f'%sk_dtModel2.score(X2,y2))
 
 sk_result2 = sk_dtModel2.predict(test_X2)
 print('\nsklearn test score:%f'%sk_dtModel2.score(test_X2,test_y2))
-
-'''
-start=time.clock()
-trees=[]
-for i in range(1000):
-    trees.append(dtModel5.tree.copy())
-print('time cost: %f'%(time.clock()-start))
-'''

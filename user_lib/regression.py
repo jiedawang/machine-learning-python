@@ -10,7 +10,7 @@ import time
 #线性回归
 class LinearRegression:
     '''\n  
-    Note: 以展示各个算法的实现为目的
+    Note: 线性回归，只能用于回归，对于非线性问题的拟合需要进行特征映射
     
     Parameters
     ----------
@@ -57,39 +57,39 @@ class LinearRegression:
     
     #线性内核函数
     #fx=theta0*1+theta1*x1+theta2*x2+...
-    '''
-    return
-    0: 矩阵相乘结果，即预测值向量，narray(m,1)类型
-    '''
     def linear_(self,X,theta):
+        '''
+        return
+        0: 矩阵相乘结果，即预测值向量，narray(m,1)类型
+        '''
         return np.dot(X,theta)
     
     #代价函数,用于衡量拟合的偏差程度
-    '''
-    return
-    0: 平方误差，float类型
-    '''
     def cost_(self,y,p_y):
+        '''
+        return
+        0: 平方误差，float类型
+        '''
         re=p_y-y
         return np.dot(re.T,re)/2/len(y)
         #旧版代码：return (np.sum((p_y-y)**2)/2/len(y))
     
     #正规方程
-    '''
-    return
-    0: 求解的参数向量，narray(m,1)类型
-    '''
     def norm_equa_(self,X,y,L2_n):
+        '''
+        return
+        0: 求解的参数向量，narray(m,1)类型
+        '''
         I=np.eye(len(X.columns))
         theta=np.dot(np.dot(np.linalg.inv(np.dot(X.T,X)-L2_n*I),X.T),y)
         return theta
         
     #单次梯度下降
-    '''
-    return
-    0: 依据学习率和梯度变化后的参数向量，narray(m,1)类型
-    '''
     def stoc_grad_desc_(self,X,y,theta,L2_n,a):
+        '''
+        return
+        0: 依据学习率和梯度变化后的参数向量，narray(m,1)类型
+        '''
         temp=theta
         #计算theta向量依据学习率和梯度变化后的值
         p_y=self.linear_(X,theta)
@@ -102,22 +102,25 @@ class LinearRegression:
     #用正规方程进行拟合
     #注：直接求得最优解，在特征数少时建议采用该方法，特征数很多时该方法效率很差
     #L2_n不为0时应用L2正则化（权重衰减），避免过拟合
-    '''
-    return
-    0: 求解的参数向量，Series类型
-    '''
     def fit_by_ne_(self,X,y):
+        '''
+        return
+        0: 求解的参数向量，Series类型
+        '''
         theta=self.norm_equa_(X,y,self.L2_n)
         return pd.Series(theta)
     
     #用梯度下降法进行拟合
     #注：迭代优化逼近最优解，在特征数很多时也有较好的效率
     #梯度下降需要求代价函数的一阶连续导数，无法应用L1正则化，只能使用L2正则化
-    '''
-    return
-    0: 结束迭代后得到的参数向量，Series类型
-    '''
     def fit_by_sgd_(self,X,y):
+        '''
+        return
+        0: 结束迭代后得到的参数向量，Series类型
+        1: 历史参数向量，DataFrame类型
+        2: 迭代中达到的最小代价，float类型
+        3: 历史代价，Series类型
+        '''
         n,m=len(y),len(X.columns)
         #校正mini-batch
         if self.mini_batch==0:
@@ -129,7 +132,7 @@ class LinearRegression:
                 mini_batch=256
         else:
             if self.mini_batch>n:
-                print('warning: mini-batch is too big')
+                print('\nwarning: mini-batch is too big')
                 mini_batch=n
             else:
                 mini_batch=self.mini_batch
@@ -161,11 +164,11 @@ class LinearRegression:
             else:
                 no_desc+=1
             if (no_desc>=10)&(self.early_stop==True):
-                print('warning: early stopping')
+                print('\nwarning: early stopping')
                 break
             #cost值溢出时停止迭代
             if cost==float("inf"):
-                print('warning: cost value overflow')
+                print('\nwarning: cost value overflow')
                 break
         #cost和theta的历史值
         theta=pd.Series(theta)
@@ -173,21 +176,21 @@ class LinearRegression:
         cost_h=pd.Series(cost_h)
         #异常提示：cost变化曲线严重发散
         if cost_h[len(cost_h)-1]/cost_h[0]>=1e+10:
-            print('warning: seriously divergence')
+            print('\nwarning: seriously divergence')
         #异常提示：cost变化曲线强烈振荡
         if cost_h[cost_h>cost_h[0]].count()>0:
-            print('warning: strong oscillation')
+            print('\nwarning: strong oscillation')
         #异常提示：cost变化曲线末梢不稳定且出现反弹回升
         if cost_h[cost_h.index>(self.iter_max/2)].mean()/cost_min>2:
-            print('warning: later costs were unstable and rebounded')
+            print('\nwarning: later costs were unstable and rebounded')
         return theta,theta_h,cost_min,cost_h
     
     #X输入校验
-    '''
-    return
-    0: 补齐常数列的X，DataFrame类型
-    '''
     def check_input_X_(self,X):
+        '''
+        return
+        0: 补齐常数列的X，DataFrame类型
+        '''
         if type(X)==type(pd.Series()):
             X=X.to_frame()
         check_type('X',type(X),type(pd.DataFrame()))
@@ -240,10 +243,10 @@ class LinearRegression:
         #归一化校验
         range_=X.iloc[:,1:].max()-X.iloc[:,1:].min()
         if (range_.max()<1.1)&(range_.min()>0.9):
-            if self.a<0.1:
-                print('it is recommended to change a over 0.1 for scaled X')
+            if (self.a<0.1)&(self.fit_mode=='sgd'):
+                print('\nit is recommended to change a over 0.1 for scaled X')
         else:
-            print('it is recommended to scale X')
+            print('\nit is recommended to scale X')
         #选择不同的拟合方式
         print('\nfitting ---')
         if self.fit_mode=='ne':
@@ -265,7 +268,7 @@ class LinearRegression:
                 p_y=self.predict(X,check_input=False)
                 self.score=self.assess(y,p_y,check_input=False)
             except:
-                print('warning: fail to assess on train')
+                print('\nwarning: fail to assess on train')
         time_cost=time.clock()-start
         if show_time==True:
             print('\ntime used for training: %f'%time_cost)
@@ -298,7 +301,7 @@ class LinearRegression:
             plt.legend(loc='right')
             plt.show()
         except:
-            print('fail to plot: this method can only use after fit by sgd')
+            print('\nfail to plot: this method can only use after fit by sgd')
 
     #预测    
     def predict(self,X,theta=None,show_time=False,check_input=True):
@@ -391,7 +394,7 @@ class LinearRegression:
 #逻辑回归    
 class LogisticRegression:
     '''\n  
-    Note: 以展示各个算法的实现为目的
+    Note: Note: 逻辑回归，只能用于分类（虽然名字叫回归），对于非线性问题的拟合需要进行特征映射
     
     Parameters
     ----------
@@ -446,36 +449,36 @@ class LogisticRegression:
         self.muti_class=muti_class
         
     #线性内核函数
-    '''
-    return
-    0: 矩阵相乘结果，即预测值向量，narray(m,1)类型
-    '''
     def linear_(self,X,theta):
+        '''
+        return
+        0: 矩阵相乘结果，即预测值向量，narray(m,1)类型
+        '''
         return np.dot(X,theta)
     
     #sigmoid函数
-    '''
-    return
-    0: 映射后的概率值，narray(m,1)类型，范围0.0~1.0
-    '''
     def sigmoid_(self,array):
+        '''
+        return
+        0: 映射后的概率值，narray(m,1)类型，范围0.0~1.0
+        '''
         return 1.0/(1.0+np.e**(-1.0*array))
     
     #代价函数
-    '''
-    return
-    0: log误差，float类型
-    '''
     def cost_(self,p_y,y):
+        '''
+        return
+        0: log误差，float类型
+        '''
         return np.sum(y*np.log(p_y)+(1-y)*np.log(1-p_y))*(-1.0/len(y))
     
     #单次梯度下降
     #注：逻辑回归的梯度计算和线性回归是一样的
-    '''
-    return
-    0: 依据学习率和梯度变化后的参数向量，narray(m,n)类型
-    '''
     def stoc_grad_desc_(self,X,y,theta,L2_n,a):
+        '''
+        return
+        0: 依据学习率和梯度变化后的参数向量，narray(m,n)类型
+        '''
         temp=theta
         p_y=self.sigmoid_(self.linear_(X,theta))
         temp=theta*(1-L2_n/len(y))-a*(np.dot(X.T,p_y-y))/len(y)
@@ -485,6 +488,13 @@ class LogisticRegression:
     #注：迭代优化逼近最优解，在特征数很多时也有较好的效率
     #梯度下降需要求损失函数的一阶连续导数，无法应用L1正则化，只能使用L2正则化
     def fit_by_sgd_(self,X,y):
+        '''
+        return
+        0: 结束迭代后得到的参数向量，Series类型
+        1: 历史参数向量，DataFrame类型
+        2: 迭代中达到的最小代价，float类型
+        3: 历史代价，Series类型
+        '''
         #数据集大小，特征数量
         n,m=len(y),len(X.columns)
         #校正mini-batch
@@ -497,7 +507,7 @@ class LogisticRegression:
                 mini_batch=256
         else:
             if self.mini_batch>n:
-                print('warning: mini-batch is too big')
+                print('\nwarning: mini-batch is too big')
                 mini_batch=n
             else:
                 mini_batch=self.mini_batch
@@ -528,11 +538,11 @@ class LogisticRegression:
             else:
                 no_desc+=1
             if (no_desc>=10)&(self.early_stop==True):
-                print('early stopping')
+                print('\nwarning: early stopping')
                 break
             #cost值溢出时停止迭代
             if cost==float("inf"):
-                print('warning: cost value overflow')
+                print('\nwarning: cost value overflow')
                 break
         #cost和theta的历史值
         theta=pd.Series(theta)
@@ -540,21 +550,21 @@ class LogisticRegression:
         cost_h=pd.Series(cost_h)
         #异常提示：cost变化曲线严重发散
         if cost_h[len(cost_h)-1]/cost_h[0]>=1e+10:
-            print('warning: seriously divergence')
+            print('\nwarning: seriously divergence')
         #异常提示：cost变化曲线强烈振荡
         if cost_h[cost_h>cost_h[0]].count()>0:
-            print('warning: strong oscillation')
+            print('\nwarning: strong oscillation')
         #异常提示：cost变化曲线后半部分不稳定且出现反弹回升
         if cost_h[cost_h.index>(self.iter_max/2)].mean()/cost_min>2:
-            print('warning: later costs were unstable and rebounded')
+            print('\nwarning: later costs were unstable and rebounded')
         return theta,theta_h,cost_min,cost_h
     
     #X输入校验
-    '''
-    return
-    0: 补齐常数列的X，DataFrame类型
-    '''
     def check_input_X_(self,X):
+        '''
+        return
+        0: 补齐常数列的X，DataFrame类型
+        '''
         if type(X)==type(pd.Series()):
             X=X.to_frame()
         check_type('X',type(X),type(pd.DataFrame()))
@@ -564,11 +574,11 @@ class LogisticRegression:
         return dp.fill_x0(X)
     
     #y/p_y输入校验
-    '''
-    return
-    0: 转换为str的y，Series类型
-    '''
     def check_input_y_(self,y,name='y'):
+        '''
+        return
+        0: 转换为str的y，Series类型
+        '''
         check_type(name,type(y),type(pd.Series()))
         return y.astype('str')
     
@@ -622,9 +632,9 @@ class LogisticRegression:
         range_=X.iloc[:,1:].max()-X.iloc[:,1:].min()
         if (range_.max()<1.1)&(range_.min()>0.9):
             if self.a<0.1:
-                print('it is recommended to change a over 0.1 for scaled X')
+                print('\nit is recommended to change a over 0.1 for scaled X')
         else:
-            print('it is recommended to scale X')
+            print('\nit is recommended to scale X')
         #将单列的多类别分类值转换为多列的01类别判断，索引(记录，类)->属于该类
         Y=dp.dummy_var(y)
         theta_h,cost_h=[],[]
@@ -677,11 +687,11 @@ class LogisticRegression:
             return theta
     
     #所有分类器的预测结果
-    '''
-    return
-    0: 预测矩阵，narray(m,n)类型
-    '''
     def predict_(self,X,theta,classes_paired=None,return_proba=False):
+        '''
+        return
+        0: 预测矩阵，narray(m,n)类型
+        '''
         #在各个分类器判定为正分类的概率，索引（记录，分类器）->正分类概率
         p_y=self.sigmoid_(self.linear_(X,theta))
         #进一步转化为各个分类的概率,索引(记录，类)

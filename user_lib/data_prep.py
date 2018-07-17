@@ -2,7 +2,6 @@
 import pandas as pd
 import numpy as np
 import numba as nb
-import re
 
 #拆分训练集和测试集
 def split_train_test(data,frac=0.8,random_state=None):
@@ -28,11 +27,10 @@ def dummy_var(s):
     return
     0: 处理后的数据集，DataFrame类型
     '''
-    values=s.sort_values().drop_duplicates().tolist()
-    result=np.ones((len(s),len(values))).astype('int')
+    values,counts=unique_count(s.values)
+    result=np.zeros((len(s),len(values))).astype('int')
     for i in range(len(values)):
-        ovr=(s==values[i])
-        result[:,i]=ovr.astype('int').values
+        result[s==values[i],i]=1
     return pd.DataFrame(result,columns=values,index=s.index)
 
 #常数列补齐
@@ -306,6 +304,34 @@ def unique_count(array):
             value,count=array_[i],1
     counts.append(count)
     return np.array(values),np.array(counts)
+
+#权重分类求和
+@nb.jit(nopython=True,cache=True)
+def weight_sum(array,weight):
+    '''
+    array:需要统计的数据列，narray类型
+    weight:权重的数据列，narray类型
+    return
+    0:去重后的数据列，narray类型
+    1:数量统计，narray类型
+    '''
+    #排序
+    sort_idx=np.argsort(array)
+    array_=array[sort_idx]
+    weight_=weight[sort_idx]
+    #初始化值变量：取值列表/当前取值/计数列表/当前计数
+    values,value=[array_[0]],array_[0]
+    weights,weight=[],0
+    #遍历数据列，对每个取值计数
+    for i in range(len(array_)):
+        if array_[i]==value:
+            weight+=weight_[i]
+        else:
+            values.append(array_[i])
+            weights.append(weight)
+            value,weight=array_[i],weight_[i]
+    weights.append(weight)
+    return np.array(values),np.array(weights)
 
 #列表元素查找
 @nb.jit(nopython=True,cache=True)
