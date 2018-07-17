@@ -602,7 +602,7 @@ def pre_split(array,continuity=False,key=None):
 def split(X,y,weight,split_idx):
     '''
     X: 特征列，narray类型
-    y: 观测值列，narray类型
+    y: 目标列，narray类型
     weight: 权重，narray类型
     split_idx: 子集索引，narray类型
     return 
@@ -627,9 +627,11 @@ def split(X,y,weight,split_idx):
 def choose_split(x,y,continuity_x,weight,criterion='gini',simplify=True):
     '''
     x:特征列，narray类型
-    y:观测值列，narray类型
+    y:目标列，narray类型
     weight: 权重，narray类型
+    continuity_x: x的连续性，bool类型
     criterion:衡量标准，str类型，支持entropy/gini/sqr_err
+    simplify: 简化分裂方案，booll类型
     return
     0:最优分裂指标，float类型 
     1:最优分裂子集索引，narray类型 
@@ -965,11 +967,12 @@ class DecisionTree:
     def compute_proba_(self,y,name,weight,return_counts=False):
         '''
         y: 分类列，narray类型
-        return_count: 是否返回类和计数，bool类型
+        name: 列名，str类型
+        return_count: 是否返回类和权重和，bool类型
         return
         0: 分类概率，dict类型
         1: 类列表，narray类型
-        2: 类计数，narray类型
+        2: 类权重和，narray类型
         '''
         proba={}
         values,weights=dp.weight_sum(y,weight)
@@ -1004,8 +1007,8 @@ class DecisionTree:
     #叶节点判断(仅先行判断的条件，非全部条件)
     def is_leaf_(self,X,y,depth):
         '''
-        X: 当前所有的特征列，DataFrame类型
-        y: 观测值列，Series类型
+        X: 特征列，DataFrame类型
+        y: 目标列，Series类型
         depth: 当前深度，int类型
         return
         0: 是否叶节点，bool类型
@@ -1041,15 +1044,15 @@ class DecisionTree:
     #构建树
     def build_(self,X,y,weight):
         '''
-        X: 当前所有的特征列，DataFrame类型
-        y: 观测值列，Series类型
+        X: 特征列，DataFrame类型
+        y: 目标列，Series类型
         weight: 样本权重，Series类型
         return
         0: 决策树，Tree类型
         '''
         #初始化决策树
         deciTree=Tree()
-        #等待处理的数据队列：特征，观测值，连续性，父节点id，深度，
+        #等待处理的数据队列：特征列，目标列，连续性，父节点id，深度，
         #                   分裂特征名,约束方式，分裂值
         columns=list(range(len(X.columns)))
         queue=[(X.values,y.values,columns,weight.values,-1,0,None,None,None)]
@@ -1251,8 +1254,8 @@ class DecisionTree:
 
         Parameters
         ----------
-        X: 所有的特征列，DataFrame类型
-        y: 观测值列，Series类型
+        X: 特征列，DataFrame类型
+        y: 目标列，Series类型
         sample_weight: 样本权重，Series类型
         output: 是否输出拟合好的树，bool类型，默认值False
         show_time: 是否显示耗时，bool类型，默认值False
@@ -1541,8 +1544,8 @@ class DecisionTree:
     #降低错误率剪枝 Reduced-Error Pruning
     def pruning_rep_(self,test_X,test_y,tree=None,return_subtrees=False):
         '''
-        test_X: 测试数据集全部特征列，DataFrame类型
-        test_y: 测试数据集全部观测值列，Series类型
+        test_X: 测试数据集特征列，DataFrame类型
+        test_y: 测试数据集目标列，Series类型
         tree: 决策树，Tree类型
         return_subtrees: 是否返回剪枝过程的子树序列，bool类型
         return
@@ -1616,8 +1619,8 @@ class DecisionTree:
     #代价复杂度剪枝 Cost-Complexity Pruning  
     def pruning_ccp_(self,test_X,test_y,tree=None,return_subtrees=False):
         '''
-        test_X: 测试数据集全部特征列，DataFrame类型
-        test_y: 测试数据集全部观测值列，Series类型
+        test_X: 测试数据集特征列，DataFrame类型
+        test_y: 测试数据集目标列，Series类型
         tree: 决策树，Tree类型
         return_subtrees: 是否返回剪枝过程的子树序列，bool类型
         return
@@ -1677,8 +1680,8 @@ class DecisionTree:
         
         Parameters
         ----------
-        test_X: 测试数据集全部特征列，DataFrame类型，默认值None
-        test_y: 测试数据集全部观测值列，Series类型，默认值None
+        test_X: 测试数据集特征列，DataFrame类型，默认值None
+        test_y: 测试数据集目标列，Series类型，默认值None
         tree: 决策树，Tree类型，默认调用内部缓存的树
         mode: 模式，str类型，默认值'ccp'，
               'rep'->降低错误率剪枝
@@ -1893,7 +1896,6 @@ class DecisionTree:
     def plot_(self,start_id,tree):
         '''
         start_id: 开始节点，int类型
-        print_loc: 打印节点位置信息，bool类型
         tree: 决策树，Tree类型
         '''
         node,iloc=tree.find_node(start_id,return_iloc=True)

@@ -94,8 +94,8 @@ class RandomForest:
 
         Parameters
         ----------
-        X: 所有的特征列，DataFrame类型
-        y: 观测值列，Series类型
+        X: 特征列，DataFrame类型
+        y: 目标列，Series类型
         show_time: 是否显示耗时，bool类型，默认值False
         ----------
         '''
@@ -349,13 +349,14 @@ class RandomForest:
         
         Parameters
         ----------
-        test_X: 测试集特征矩阵，DataFrame类型
-        test_y: 测试集观测向量，Series类型
+        test_X: 测试集特征列，DataFrame类型
+        test_y: 测试集目标列，Series类型
         units: 集成单元，list(DecitionTree)类型
         units_oob_score: 集成单元obb评分，list(float)类型
         use: 使用的选择方法，str类型，默认'oob'
              'rd'->随机选择，'oob'->oob选择
         return_units: 是否以返回值形式给到选择后的集成单元，bool类型，默认False
+        show_time: 是否显示耗时，bool类型，默认值False
         ----------
         
         Returns
@@ -417,15 +418,14 @@ class AdaBoost:
     units: 集成单元列表，list(object)类型
     features: 特征列表，list(str)类型
     classes: 分类标签列表，list(str)类型，分类模式下有效
-    units_weight: 集成单元权重，Series类型
-    sample_weight_h: 样本历史权重，list(Series)类型
-    units_error: 集成单元误差，list(float)类型
-    units_weighted_error: 集成单元加权误差，list(float)类型
+    units_weight: 集成单元权重，list(float)类型
+    fit_h: 拟合过程中的观测值/预测值/样本权重，list(DataFrame)类型
+    units_error: 集成单元误差和加权误差，DataFrame类型
     ----------
     '''
     
     def __init__(self,mode='c',iter_max=10,units_type='cart',depth_max=0,
-                 features_use='all',learning_rate=1.0):
+                 learning_rate=1.0):
         
         #校验参数类型和取值
         check_type('mode',type(mode),type(''))
@@ -455,13 +455,12 @@ class AdaBoost:
         #保存参数
         #注：此处depth_max参考了sklearn,尝试过回归也用depth_max=1，效果很糟糕
         self.unit_test=dt.DecisionTree(mode=mode,model_type=units_type,
-                                       depth_max=depth_max,features_use=features_use)
+                                       depth_max=depth_max)
         self.mode=mode
         self.iter_max=iter_max
         self.units_type=units_type
         self.learning_rate=learning_rate
         self.depth_max=depth_max
-        self.features_use=features_use
 
     #个体误差
     def errors_(self,y,p_y,mode):
@@ -522,8 +521,8 @@ class AdaBoost:
 
         Parameters
         ----------
-        X: 所有的特征列，DataFrame类型
-        y: 观测值列，Series类型
+        X: 特征列，DataFrame类型
+        y: 目标列，Series类型
         show_time: 是否显示耗时，bool类型，默认值False
         ----------  
         '''
@@ -553,7 +552,7 @@ class AdaBoost:
                 print('\nfitting with unit %d ---'%i)
             #构建并拟合模型
             unit=dt.DecisionTree(mode=self.mode,model_type=self.units_type,
-                                 depth_max=self.depth_max,features_use=self.features_use)
+                                 depth_max=self.depth_max)
             unit.continuity_X,unit.mapping_X=self.continuity_X,self.mapping_X
             unit.continuity_y,unit.mapping_y=self.continuity_y,self.mapping_y
             unit.features_use_n=feature_use_n
@@ -769,7 +768,8 @@ class GradientBoosting:
     classes: 分类标签列表，list(str)类型，分类模式下有效
     ----------
     '''
-    def __init__(self,mode='c',units_type='cart',iter_max=10,depth_max=0,learning_rate=1.0):
+    def __init__(self,mode='c',units_type='cart',iter_max=10,depth_max=0,
+                 learning_rate=1.0):
         
         #校验参数类型和取值
         check_type('mode',type(mode),type(''))
@@ -846,8 +846,8 @@ class GradientBoosting:
 
         Parameters
         ----------
-        X: 所有的特征列，DataFrame类型
-        y: 观测值列，Series类型
+        X: 特征列，DataFrame类型
+        y: 目标列，Series类型
         show_time: 是否显示耗时，bool类型，默认值False
         ----------  
         '''
