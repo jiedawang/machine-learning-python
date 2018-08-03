@@ -27,7 +27,7 @@ def dummy_var(s):
     return
     0: 处理后的数据集，DataFrame类型
     '''
-    values,counts=unique_count(s.values)
+    values=s.drop_duplicates().sort_values().tolist()
     result=np.zeros((len(s),len(values))).astype('int')
     for i in range(len(values)):
         result[s==values[i],i]=1

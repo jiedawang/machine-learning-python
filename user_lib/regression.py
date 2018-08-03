@@ -18,7 +18,7 @@ class LinearRegression:
               'ne'->正规方程法，直接求得最优解，在特征数量很多时速度会很慢
               'sgd'->随机梯度下降，迭代优化，没有限制但需要选择合适的a和iter_max
               默认值'ne'
-    a: 迭代优化学习率，float类型(>0.0)，默认值0.001
+    learning_rate: 迭代优化学习率，float类型(>0.0)，默认值0.001
     iter_max: 迭代优化迭代次数上限，int类型(>0)，默认值1000
     mini_batch: 迭代优化每次使用的样本数，int类型(>0)，0为自动选择，默认值0
     L2_n: L2正则化系数，float类型(>0.0)，默认值为0，
@@ -29,13 +29,13 @@ class LinearRegression:
     ----------
     '''
     
-    def __init__(self,fit_mode='ne',a=0.001,iter_max=1000,mini_batch=256,
-                 L2_n=0.0,early_stop=True):
+    def __init__(self,fit_mode='ne',learning_rate=0.001,iter_max=1000,
+                 mini_batch=256,L2_n=0.0,early_stop=True):
         #校验参数类型和取值
         #check_type(变量名，变量类型，要求类型)
         #check_limit(变量名，限制条件，正确取值提示)
         check_type('fit_mode',type(fit_mode),type(''))
-        check_type('a',type(a),type(0.0))
+        check_type('learning_rate',type(learning_rate),type(0.0))
         check_type('iter_max',type(iter_max),type(0))
         check_type('mini_batch',type(mini_batch),type(0))
         check_type('L2_n',type(L2_n),type(0.0))
@@ -43,12 +43,12 @@ class LinearRegression:
         fit_mode=fit_mode.lower()
         mode_list=['ne','sgd']
         check_limit('fit_mode',fit_mode in mode_list,str(mode_list))
-        check_limit('a',a>0.0,'value>0.0')
+        check_limit('learning_rate',learning_rate>0.0,'value>0.0')
         check_limit('iter_max',iter_max>0,'value>0')
         check_limit('mini_batch',mini_batch>=0,'value>=0')
         check_limit('L2_n',L2_n>=0.0,'value>=0.0')
         self.fit_mode=fit_mode
-        self.a=a
+        self.learning_rate=learning_rate
         self.iter_max=iter_max
         self.mini_batch=mini_batch
         self.L2_n=L2_n
@@ -85,7 +85,7 @@ class LinearRegression:
         return theta
         
     #单次梯度下降
-    def stoc_grad_desc_(self,X,y,theta,L2_n,a):
+    def stoc_grad_desc_(self,X,y,theta,L2_n,learning_rate):
         '''
         return
         0: 依据学习率和梯度变化后的参数向量，narray(m,1)类型
@@ -93,7 +93,7 @@ class LinearRegression:
         temp=theta
         #计算theta向量依据学习率和梯度变化后的值
         p_y=self.linear_(X,theta)
-        temp=theta*(1-L2_n/len(y))-a*(np.dot(X.T,p_y-y))/len(y)
+        temp=theta*(1-L2_n/len(y))-learning_rate*(np.dot(X.T,p_y-y))/len(y)
         return temp
         #旧版代码（非矩阵运算，性能相差6倍）
         #for i in range(len(theta)):
@@ -150,7 +150,7 @@ class LinearRegression:
             #进行一次梯度下降
             sp_X=X.sample(n=mini_batch)
             sp_y=y[sp_X.index]
-            theta=self.stoc_grad_desc_(sp_X,sp_y,theta,self.L2_n,self.a)
+            theta=self.stoc_grad_desc_(sp_X,sp_y,theta,self.L2_n,self.learning_rate)
             #记录本次结果
             self.iter_num+=1
             theta_h.append(tuple(theta))
@@ -243,8 +243,8 @@ class LinearRegression:
         #归一化校验
         range_=X.iloc[:,1:].max()-X.iloc[:,1:].min()
         if (range_.max()<1.1)&(range_.min()>0.9):
-            if (self.a<0.1)&(self.fit_mode=='sgd'):
-                print('\nit is recommended to change a over 0.1 for scaled X')
+            if (self.learning_rate<0.1)&(self.fit_mode=='sgd'):
+                print('\nit is recommended to change learning_rate over 0.1 for scaled X')
         else:
             print('\nit is recommended to scale X')
         #选择不同的拟合方式
@@ -401,7 +401,7 @@ class LogisticRegression:
     fit_mode: 拟合模式，str类型,目前只有sgd,
               'sgd'->随机梯度下降，迭代优化，没有限制但需要选择合适的a和iter_max
               默认值'sgd'
-    muti_class: 多分类模式，str类型，默认'ovr'，(下面的n指类的数量)
+    multi_class: 多分类模式，str类型，默认'ovr'，(下面的n指类的数量)
                 'ovr'-> one vs rest，一个分类作为正样本，其余分类作为负样本，
                         共训练n个分类器
                 'ovo'-> one vs one，一个分类作为正样本，另一个分类作为负样本，
@@ -409,7 +409,7 @@ class LogisticRegression:
                 除训练多个分类器，每个分类器一个参数向量的方式外，
                 还可以直接训练单个分类器，该分类器拥有一个参数矩阵，
                 但要求训练集大小一致，ovr容易实现该种方式
-    a: 迭代优化学习率，float类型(>0.0)，默认值0.001
+    learning_rate: 迭代优化学习率，float类型(>0.0)，默认值0.001
     iter_max: 迭代优化迭代次数上限，int类型(>0)，默认值1000
     mini_batch: 迭代优化每次使用的样本数，int类型(>0)，默认值256
     L2_n: L2正则化系数，float类型(>0.0)，默认值为0，
@@ -420,14 +420,14 @@ class LogisticRegression:
     ----------
     '''
     
-    def __init__(self,fit_mode='sgd',muti_class='ovo',a=0.001,
+    def __init__(self,fit_mode='sgd',multi_class='ovo',learning_rate=0.001,
                  iter_max=1000,mini_batch=0,L2_n=0.0,early_stop=True):
         #校验参数类型和取值
         #check_type(变量名，变量类型，要求类型)
         #check_limit(变量名，限制条件，正确取值提示)
         check_type('fit_mode',type(fit_mode),type(''))
-        check_type('muti_class',type(muti_class),type(''))
-        check_type('a',type(a),type(0.0))
+        check_type('multi_class',type(multi_class),type(''))
+        check_type('learning_rate',type(learning_rate),type(0.0))
         check_type('iter_max',type(iter_max),type(0))
         check_type('mini_batch',type(mini_batch),type(0))
         check_type('L2_n',type(L2_n),type(0.0))
@@ -435,18 +435,18 @@ class LogisticRegression:
         fit_mode=fit_mode.lower()
         mode_list,mode_list2=['sgd'],['ovr','ovo']
         check_limit('fit_mode',fit_mode in mode_list,str(mode_list))
-        check_limit('muti_class',muti_class in mode_list2,str(mode_list2))
-        check_limit('a',a>0.0,'value>0.0')
+        check_limit('multi_class',multi_class in mode_list2,str(mode_list2))
+        check_limit('learning_rate',learning_rate>0.0,'value>0.0')
         check_limit('iter_max',iter_max>0,'value>0')
         check_limit('mini_batch',mini_batch>=0,'value>=0')
         check_limit('L2_n',L2_n>=0.0,'value>=0.0')
         self.fit_mode=fit_mode
-        self.a=a
+        self.learning_rate=learning_rate
         self.iter_max=iter_max
         self.mini_batch=mini_batch
         self.L2_n=L2_n
         self.early_stop=early_stop
-        self.muti_class=muti_class
+        self.multi_class=multi_class
         
     #线性内核函数
     def linear_(self,X,theta):
@@ -474,14 +474,14 @@ class LogisticRegression:
     
     #单次梯度下降
     #注：逻辑回归的梯度计算和线性回归是一样的
-    def stoc_grad_desc_(self,X,y,theta,L2_n,a):
+    def stoc_grad_desc_(self,X,y,theta,L2_n,learning_rate):
         '''
         return
         0: 依据学习率和梯度变化后的参数向量，narray(m,n)类型
         '''
         temp=theta
         p_y=self.sigmoid_(self.linear_(X,theta))
-        temp=theta*(1-L2_n/len(y))-a*(np.dot(X.T,p_y-y))/len(y)
+        temp=theta*(1-L2_n/len(y))-learning_rate*(np.dot(X.T,p_y-y))/len(y)
         return temp
     
     #使用梯度下降拟合
@@ -524,7 +524,7 @@ class LogisticRegression:
             #进行一次梯度下降
             sp_X=X.sample(n=mini_batch)
             sp_y=y[sp_X.index]
-            theta=self.stoc_grad_desc_(sp_X,sp_y,theta,self.L2_n,self.a)
+            theta=self.stoc_grad_desc_(sp_X,sp_y,theta,self.L2_n,self.learning_rate)
             #记录本次结果
             self.iter_num+=1
             theta_h[i]=theta
@@ -631,15 +631,15 @@ class LogisticRegression:
         #归一化校验
         range_=X.iloc[:,1:].max()-X.iloc[:,1:].min()
         if (range_.max()<1.1)&(range_.min()>0.9):
-            if self.a<0.1:
-                print('\nit is recommended to change a over 0.1 for scaled X')
+            if self.learning_rate<0.1:
+                print('\nit is recommended to change learning_rate over 0.1 for scaled X')
         else:
             print('\nit is recommended to scale X')
         #将单列的多类别分类值转换为多列的01类别判断，索引(记录，类)->属于该类
         Y=dp.dummy_var(y)
         theta_h,cost_h=[],[]
         #多分类模式ovr
-        if self.muti_class=='ovr':
+        if self.multi_class=='ovr':
             theta=np.zeros((features_n,classes_n))
             cost_min=np.zeros(classes_n)
             cost=np.zeros(classes_n)
@@ -651,7 +651,7 @@ class LogisticRegression:
                 cost_h.append(cost_h_)
             self.classes_paired=None
         #多分类模式ovo
-        elif self.muti_class=='ovo':
+        elif self.multi_class=='ovo':
             #正负样本选取矩阵,索引(组合，类)->取用
             class_p,class_n=dp.combine_enum_paired(list(range(classes_n)))
             #应用正负样本选取矩阵后的分类情况，索引(记录，组合)->分类判断
@@ -705,7 +705,6 @@ class LogisticRegression:
         p_y=(p_y.T/p_y.sum(axis=1)).T
         #转化为离散值
         if return_proba==False:
-            p_y_=np.zeros(len(p_y))
             p_y_max=p_y.max(axis=1)
             max_idx=(p_y.T==p_y_max).T.astype('int')
             classes_idx=np.array(range(p_y.shape[1]))

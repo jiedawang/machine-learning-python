@@ -813,7 +813,7 @@ class GradientBoosting:
         #注：此处的y需要是one-hot编码，p_y需要是分类概率预测
         if mode=='c':
             return (-y*np.log(p_y)).sum()
-        #回归使用最小二乘损失
+        #回归使用平方损失
         elif mode=='r':
             re=y-p_y
             return np.dot(re.T,re)/2/len(y)

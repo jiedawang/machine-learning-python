@@ -50,8 +50,7 @@ theta_by_ne=linear1.fit(X_,y,show_time=True,output=True)
 #2：梯度下降法
 print('\n梯度下降法：')
 #最大迭代次数,学习率
-iter_max,a=1000,0.1
-linear2=rg.LinearRegression(fit_mode='sgd',a=a,iter_max=iter_max)
+linear2=rg.LinearRegression(fit_mode='sgd',learning_rate=0.3,iter_max=1000)
 #拟合
 theta_by_gd=linear2.fit(X_,y,show_time=True,output=True)
 theta_h=linear2.theta_h

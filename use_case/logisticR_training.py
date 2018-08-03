@@ -17,8 +17,7 @@ y1=buf.iloc[:,2]
 ref1=dp.scaler_reference(X1)
 X1_=dp.minmax_scaler(X1,ref1)
 
-iter_max,a=100,1.0
-logR1=rg.LogisticRegression(a=a,iter_max=iter_max)
+logR1=rg.LogisticRegression(learning_rate=1.0,iter_max=100)
 
 theta1=logR1.fit(X1_,y1,output=True,show_time=True)
 theta_h1=logR1.theta_h
@@ -48,8 +47,7 @@ y2=buf.iloc[:,2]
 #X2_=dp.minmax_scaler(X2)
 X2_=dp.feature_mapping(X2,6,cross=True)
 
-iter_max,a=100,1.0
-logR2=rg.LogisticRegression(a=a,iter_max=iter_max)
+logR2=rg.LogisticRegression(learning_rate=1.0,iter_max=100)
 
 theta2=logR2.fit(X2_,y2,output=True,show_time=True)
 theta_h2=logR2.theta_h
@@ -89,8 +87,7 @@ ref3=dp.scaler_reference(X3)
 X3_=dp.minmax_scaler(X3,ref3)
 test_X3_=dp.minmax_scaler(test_X3,ref3)
 
-iter_max,a=1000,1.0
-logR3=rg.LogisticRegression(a=a,iter_max=iter_max)
+logR3=rg.LogisticRegression(learning_rate=1.0,iter_max=1000)
 
 theta3=logR3.fit(X3_,y3,output=True,show_time=True)
 theta_h3=logR3.theta_h
@@ -125,7 +122,7 @@ sk_test_score=lgModel.score(test_X3_, test_y3)
 print('\nsklearn test score:%f'%sk_test_score)
 
 #迭代次数与拟合程度关系
-logR4=rg.LogisticRegression(a=1.0)
+logR4=rg.LogisticRegression(learning_rate=1.0)
 
 iter_max,iter_add,add_times=0,20,50
 iter_max_list,score_list=[],[]
@@ -161,13 +158,14 @@ ref4=dp.scaler_reference(X4)
 X4_=dp.minmax_scaler(X4,ref4)
 test_X4_=dp.minmax_scaler(test_X4,ref4)
 
-iter_max,a=1000,1.0
-muti_class_list=['ovo','ovr']
+iter_max,learning_rate=1000,1.0
+multi_class_list=['ovo','ovr']
 
-for muti_class in muti_class_list:
+for multi_class in multi_class_list:
 
-    print('\n<muti_class: '+muti_class+'>')
-    logR4=rg.LogisticRegression(a=a,iter_max=iter_max,muti_class=muti_class)
+    print('\n<multi_class: '+multi_class+'>')
+    logR4=rg.LogisticRegression(learning_rate=learning_rate,
+                                iter_max=iter_max,multi_class=multi_class)
     
     theta4=logR4.fit(X4_,y4,output=True,show_time=True)
     theta_h4=logR4.theta_h
