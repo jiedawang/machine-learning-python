@@ -6,7 +6,7 @@ import time
 import user_lib.statistics as stats
 import user_lib.data_prep as dp
 import numba as nb
-from user_lib.check import check_type,check_limit,check_index_match,check_feats_match
+from user_lib.check import check_type,check_limit,check_index_match,check_items_match
 
 #[数据结构]
 
@@ -1338,7 +1338,7 @@ class DecisionTree:
             check_type('tree',type(tree),type(Tree()))
             check_type('return_path',type(return_path),type(True))
             check_type('dr',type(dr),type(pd.Series()))
-            check_feats_match(dr.index,tree.features,'dr','tree',mode='right')
+            check_items_match(dr.index,tree.features,'dr','tree','features',mode='right')
         #应用树，获取流至节点，再获取流经节点
         reach=tree.go(dr)
         path=tree.get_path(reach)
@@ -1376,7 +1376,7 @@ class DecisionTree:
             check_type('tree',type(tree),type(Tree()))
             check_type('node_id',type(node_id),type(0))
             check_type('X',type(X),type(pd.DataFrame()))
-            check_feats_match(X.columns,tree.features,'X','tree',mode='right')
+            check_items_match(X.columns,tree.features,'X','tree','features',mode='right')
         path_nodes=tree.get_path(node_id,return_nodes=True)
         for node in path_nodes:
             if node.nid==0:
@@ -1425,7 +1425,7 @@ class DecisionTree:
             check_type('return_paths',type(return_paths),type(True))
             check_type('show_time',type(show_time),type(True))
             X,continuity_X=self.check_input_X_(X)
-            check_feats_match(X.columns,tree.features,'X','tree',mode='right')
+            check_items_match(X.columns,tree.features,'X','tree','features',mode='right')
         #数据集大小
         n=len(X)
         #数据流，记录已达到节点
@@ -1714,7 +1714,7 @@ class DecisionTree:
                 test_y,continuity_y=self.check_input_y_(test_y,'test_y')
                 #校验X,y输入是否匹配
                 check_index_match(test_X,test_y,'test_X','test_y')
-                check_feats_match(test_X.columns,tree.features,'test_X','tree',mode='right')
+                check_items_match(test_X.columns,tree.features,'test_X','tree','features',mode='right')
         #剪枝
         if mode=='rep':
             tree_=self.pruning_rep_(test_X,test_y,tree)

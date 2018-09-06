@@ -31,21 +31,23 @@ def check_limit(name,condition,required):
                         '\nrequired -> %s'%required_str)
 
 #index匹配性校验 
-def check_index_match(a,b,a_name,b_name):
+def check_index_match(a,b,a_name,b_name,only_len=False):
     '''
     a,b: 数据集，Series或DataFrame类型
     a_name,b_name: 数据集名称，str类型
     '''
     if len(a)!=len(b):
         raise ValueError('the lengths of %s and %s do not match'%(a_name,b_name))
-    if (a.index==b.index).all()==False:
-        raise ValueError('the indexs of %s and %s do not match'%(a_name,b_name))
-    
-#特征匹配性校验
-def check_feats_match(a,b,a_name,b_name,mode='len'):
+    if only_len==False:
+        if (a.index==b.index).all()==False:
+            raise ValueError('the indexs of %s and %s do not match'%(a_name,b_name))
+
+#序列元素匹配校验
+def check_items_match(a,b,a_name,b_name,item_name,mode='len'):
     '''
-    a,b: 特征名列表，list(str)类型
-    a_name,b_name: 所属数据集名称，str类型
+    a,b: 两个序列，list或ndarray类型
+    a_name,b_name: 序列名称，str类型
+    item_name: 匹配要素名称，str类型
     mode: 匹配模式，str类型，
           'len'->仅校验长度
           'left'->左列表优先，右列表必须包含全部左列表的值
@@ -54,19 +56,17 @@ def check_feats_match(a,b,a_name,b_name,mode='len'):
     '''
     if mode=='len':
         if len(a)!=len(b):
-            raise ValueError('the numbers of %s and %s do not match'%(a_name,b_name))
+            raise ValueError('the %s of %s and %s do not match'%(item_name,a_name,b_name))
     elif mode=='left':
-        if type(a)==type([]):
-            for feature in a:
-                if feature not in b:
-                    raise ValueError('the features of %s do not match to the %s'%(b_name,a_name))
+        for feature in a:
+            if feature not in b:
+                raise ValueError('the %s of %s do not match to the %s'%(item_name,b_name,a_name))
     elif mode=='right':
-        if type(b)==type([]):
-            for feature in b:
-                if feature not in a:
-                    raise ValueError('the features of %s do not match to the %s'%(a_name,b_name))
+        for feature in b:
+            if feature not in a:
+                raise ValueError('the %s of %s do not match to the %s'%(item_name,a_name,b_name))
     elif mode=='equal':
         if set(a)!=set(b):
-            raise ValueError('the features of %s and %s do not match'%(a_name,b_name))
+            raise ValueError('the %s of %s and %s do not match'%(item_name,a_name,b_name))
     else:
         raise ValueError('unknown mode')

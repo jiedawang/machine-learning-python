@@ -5,7 +5,7 @@ import scipy.optimize as opt
 import random
 import user_lib.statistics as stats
 import user_lib.data_prep as dp
-from user_lib.check import check_type,check_limit,check_index_match,check_feats_match
+from user_lib.check import check_type,check_limit,check_index_match,check_items_match
 import time
 
 #支持向量机
@@ -543,7 +543,7 @@ class SupportVectorMachine:
         check_type('check_input',type(check_input),type(True))
         if check_input==True:
             X=self.check_input_X_(X)
-            check_feats_match(X.columns,self.sv_X[0][0,:],'features in X','support vector',mode='len')
+            check_items_match(X.columns,self.sv_X[0][0,:],'features in X','support vector','numbers',mode='len')
         #计算函数间隔
         if self.mode=='c':
             classes_n=len(self.classes)

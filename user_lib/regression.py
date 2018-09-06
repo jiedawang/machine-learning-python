@@ -4,7 +4,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import user_lib.data_prep as dp
 import user_lib.statistics as stats
-from user_lib.check import check_type,check_limit,check_index_match,check_feats_match
+from user_lib.check import check_type,check_limit,check_index_match,check_items_match
 import time
 
 #线性回归
@@ -332,7 +332,7 @@ class LinearRegression:
         if check_input==True:
             X=self.check_input_X_(X)
             self.check_input_t_(theta)
-            check_feats_match(X.columns,theta,'features in X','theta',mode='len')
+            check_items_match(X.columns,theta,'features in X','theta','numbers',mode='len')
         #预测
         p_y=pd.Series(self.linear_(X,theta),index=X.index)
         time_cost=time.clock()-start
@@ -750,7 +750,7 @@ class LogisticRegression:
         if check_input==True:
             X=self.check_input_X_(X)
             self.check_input_t_(theta)
-            check_feats_match(X.columns,theta,'features in X','theta',mode='len')
+            check_items_match(X.columns,theta,'features in X','theta','numbers',mode='len')
         #预测
         p_y=self.predict_(X,theta,classes_paired,return_proba)
         if return_proba==False:

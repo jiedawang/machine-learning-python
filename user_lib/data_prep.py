@@ -27,11 +27,17 @@ def dummy_var(s):
     return
     0: 处理后的数据集，DataFrame类型
     '''
-    values=s.drop_duplicates().sort_values().tolist()
+    if type(s)==type(pd.Series()):
+        values=s.drop_duplicates().sort_values().tolist()
+    else:
+        values=np.unique(s)
     result=np.zeros((len(s),len(values))).astype('int')
     for i in range(len(values)):
         result[s==values[i],i]=1
-    return pd.DataFrame(result,columns=values,index=s.index)
+    if type(s)==type(pd.Series()):
+        return pd.DataFrame(result,columns=values,index=s.index)
+    else:
+        return result,values.tolist()
 
 #常数列补齐
 #X首列填充1,即模型常数位忽略X的影响

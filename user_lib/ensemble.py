@@ -5,7 +5,7 @@ import pandas as pd
 import numpy as np
 import user_lib.statistics as stats
 import user_lib.data_prep as dp
-from user_lib.check import check_type,check_limit,check_index_match,check_feats_match
+from user_lib.check import check_type,check_limit,check_index_match,check_items_match
 
 #随机森林
 #基于Bagging集成学习原理，基本单元一般为决策树（可以替换为其他模型）
@@ -217,7 +217,7 @@ class RandomForest:
         for unit in units:
             features+=unit.tree.features
         features=list(set(features))
-        check_feats_match(X.columns,features,'X','unit',mode='right')
+        check_items_match(X.columns,features,'X','unit','features',mode='right')
         #分类模式先求分类概率，回归模式直接求回归值
         n=len(X)
         if mode=='c':
@@ -385,7 +385,7 @@ class RandomForest:
         for unit in units:
             features+=unit.tree.features
         features=list(set(features))
-        check_feats_match(test_X.columns,features,'test_X','tree',mode='right')
+        check_items_match(test_X.columns,features,'test_X','tree','features',mode='right')
         #选择
         if use=='rd':
             subset=self.random_selection_(test_X,test_y,units)
@@ -652,8 +652,8 @@ class AdaBoost:
         for unit in units:
             features+=unit.tree.features
         features=list(set(features))
-        check_feats_match(X.columns,features,'X','unit',mode='right')
-        check_feats_match(units,units_weight,'units','units_weight',mode='len')
+        check_items_match(X.columns,features,'X','unit','features',mode='right')
+        check_items_match(units,units_weight,'units','units_weight','numbers',mode='len')
 
         #分类模式先求分类概率，回归模式直接求回归值
         n=len(X)
@@ -1015,7 +1015,7 @@ class GradientBoosting:
             for unit in units:
                 features+=unit.tree.features
         features=list(set(features))
-        check_feats_match(X.columns,features,'X','unit',mode='right')
+        check_items_match(X.columns,features,'X','unit','features',mode='right')
         #分类模式先求分类概率，回归模式直接求回归值
         n=len(X)
         if mode=='c':

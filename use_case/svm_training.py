@@ -186,6 +186,9 @@ result5=svm5.predict(test_X5_)
 score5=svm5.assess(test_y5,result5)
 print('\nuser test score:%f'%score5)
 
+plt.scatter(range(len(y5)),y5,c='b')
+plt.scatter(range(len(result5)),result5,c='y')
+
 #简单数据集可视化
 sp_dt=[(1.5,5),(2.4,9),(3.1,30),(4.8,110),(5.2,70),(6.7,220),(8,500)]
 sp_dt=pd.DataFrame(sp_dt,columns=['x','y'])
