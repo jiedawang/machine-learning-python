@@ -2,7 +2,7 @@
 import numpy as np
 import pandas as pd
 import user_lib.neural_network as nn
-from user_lib.mnist import MnistManager
+from user_lib.image_data import MnistManager,CifarManager
 import matplotlib.pyplot as plt
 from PIL import Image
 from sklearn.neural_network import MLPClassifier
@@ -26,10 +26,9 @@ X,y=make_moons(n_samples=1000,noise=0.3)
 
 #MLP训练
 mlp0=nn.MultilayerPerceptron(
-        input_shape=(2,),output_shape=(2,),hidden_layers=(8,8),
-        activation=('relu','sigm'),cost='ce',optimizer='nagd',
-        batch_size=200,iter_max=100,learning_rate=0.1,
-        L2_alpha=0.0001,dropout_p=0.,early_stop=10,lr_atten_max=10,relu_a=0.25)
+        hidden_layers=(8,8),activation='relu',softmax=False,
+        optimizer='nagd',batch_size=200,iter_max=100,learning_rate=0.1,
+        l2_alpha=0.0001,dropout_p=0.,early_stop=10,relu_a=0.25)
 mlp0.fit(X,y,monitor_cost=True,monitor_score=True,show_time=True)
 
 #X值域
@@ -117,51 +116,63 @@ def plot_neurons_action(model,X):
  
 plot_neurons_action(mlp0,X0)
 
+#图像识别
+
 #读取mnist手写数字数据集
 mnist=MnistManager()
+#mnist.to_images(rewrite=True)
+start=time.clock()
 train_images,train_labels,test_images,test_labels=mnist.read_as_array()
+print('\ntime used for loading: %f'%(time.clock()-start))
 
 #MLP训练
 #此处测试两种优化器: nesterov,adam
 mlps=[]
 mlps.append(nn.MultilayerPerceptron(
-        input_shape=(28,28),output_shape=(10,),hidden_layers=(16,16),
-        activation=('relu','sigm'),cost='ce',optimizer='nagd',
-        batch_size=100,iter_max=100,learning_rate=0.1,
-        L2_alpha=1e-4,dropout_p=0.,early_stop=10,lr_atten_max=10))
+        hidden_layers=(100,),activation='relu',softmax=False,
+        optimizer='nagd',batch_size=100,iter_max=100,learning_rate=0.1,
+        l2_alpha=1e-4,dropout_p=0.,early_stop=10))
 mlps.append(nn.MultilayerPerceptron(
-        input_shape=(28,28),output_shape=(10,),hidden_layers=(100,),
-        activation=('relu','sigm'),cost='ce',optimizer='adam',
-        batch_size=100,iter_max=100,learning_rate=0.001,
-        L2_alpha=1e-4,dropout_p=0.,early_stop=10,lr_atten_max=10))
+        hidden_layers=(100,),activation='relu',softmax=False,
+        optimizer='adam',batch_size=100,iter_max=100,learning_rate=0.001,
+        l2_alpha=1e-4,dropout_p=0.,early_stop=10))
 
 mlps[0].fit(train_images/255,train_labels,test_images/255,test_labels,
             monitor_cost=True,monitor_score=True,show_time=True)
 #mlp0.fit(train_images/255,train_labels,monitor_cost=True,show_time=True)
-
 mlps[1].fit(train_images/255,train_labels,test_images/255,test_labels,
             monitor_cost=True,monitor_score=True,show_time=True)
 
+#耗时细节
 mlp0=mlps[0]
 mlp0.time_cost
 
 #cost下降曲线
-mlp0.cost_h.iloc[:,:].plot()
-plt.xlabel('iter')
-plt.ylabel('cost')
-plt.show()
+mlp0.plot_cost_h()
 
 #score上升曲线
-mlp0.score_h.iloc[:,:].plot()
-plt.xlabel('iter')
-plt.ylabel('score')
-plt.show()
+mlp0.plot_score_h()
 
 #预测测试
 #a=mlp0.predict(test_images/255,return_a=True)
 pred=mlp0.predict(test_images/255,show_time=True)
 score=mlp0.assess(test_labels,pred)
 print('\nuser test score:%f'%score)
+
+#单图预测
+prob0=mlp0.predict(test_images[0]/255,return_a=True)
+pred0=mlp0.prob_to_label_(prob0,mlp0.classes)
+
+#平均图像
+fig=plt.figure(figsize=(8,6))
+for i in range(10):
+    axes=plt.subplot(3,4,i+1)
+    mean_image=train_images[train_labels==str(i)].mean(axis=0)
+    mean_image=Image.fromarray(np.uint8(mean_image))
+    axes.imshow(mean_image)
+    axes.set_xticks([])
+    axes.set_yticks([])
+plt.show()
 
 #保存加载测试
 mlp0.save('D:\\Model\\mlp0.txt')
@@ -212,10 +223,12 @@ def w_plot(model,layer,w_p):
     plt.show()
     return w_p
 
+#除第一层隐含层，其他层用这种方式计算出的图像可能并不正确
 w_p=None
 for i in range(len(mlp0.biases)):
     w_p=w_plot(mlp0,i+1,w_p)
 
+'''
 def predict(X,w):
     prob=np.dot(X,w)
     pred=mlp0.prob_to_label_(prob,mlp0.classes)
@@ -225,88 +238,74 @@ prob=np.dot(test_images.reshape((-1,28*28)),w_p)
 pred_=predict(test_images.reshape((-1,28*28)),w_p)
 score_=mlp0.assess(test_labels,pred_)
 print('\nuser test score:%f'%score_)
-   
-#神经网络结构可视化
- 
-#绘制一层神经元
-def plot_layer(ax,weights,biases,layer,height,first=False):
-    #当前层神经元数量/前一层神经元数量
-    nn,pnn=weights.shape[1],weights.shape[0]
-    #屏蔽大部分神经元的显示
-    unshow,unshow_p=0,0
-    show_max=10
-    if nn>show_max:
-        unshow=nn-show_max
-        nn=show_max+1
-    if pnn>show_max:
-        unshow_p=pnn-show_max
-        pnn=show_max+1
-    if height>show_max:
-        height=show_max+1
-    #计算偏移(x是横向轴，y是纵向轴，左下角是原点)
-    x_off=layer*0.4
-    y_off=(height-nn)/2
-    y_off_p=(height-pnn)/2
-    #绘制第一层隐含层前先绘制输入层
-    if first==True:
-        for i in range(pnn):
-            plot_neuron(ax,None,1,y_off_p,(x_off-0.4,0.2*(y_off_p+pnn-i-1)))
-            if (i==show_max/2)&(pnn==show_max+1):
-                ax.text(x_off-0.4,0.2*(y_off_p+pnn-i-1),str(unshow_p),va="center",ha="center")
-    #遍历该层神经元
-    if pnn==show_max+1:
-        weights=np.r_[weights[:int(show_max/2+1)],weights[-int(show_max/2):]]
-    if nn==show_max+1:
-        weights=np.c_[weights[:,:int(show_max/2+1)],weights[:,-int(show_max/2):]]
-        biases=np.r_[biases[:int(show_max/2+1)],biases[-int(show_max/2):]]
-        biases[int(show_max/2)]=1
-    weights=np.abs(weights)
-    weights=weights/weights.max()
-    biases=np.abs(biases)
-    if biases.max()==0:
-        biases[:]=1
-    else:
-        biases=biases/biases.max()
-    for j in range(nn):
-        plot_neuron(ax,weights[:,j],biases[j],y_off_p,(x_off,0.2*(y_off+nn-j-1)))
-        if (j==show_max/2)&(nn==show_max+1):
-            ax.text(x_off,0.2*(y_off+nn-j-1),str(unshow),va="center",ha="center")
-
-#绘制一个神经元           
-def plot_neuron(ax,w,b,y_off_p,xy,text='    '):
-    #绘制该神经元=
-    style_neuron = dict(boxstyle="circle", color='white', ec='black',lw=0.5+b) 
-    ax.annotate(text,xy=(0,0),xycoords='axes fraction',
-                xytext=(xy[0],xy[1]),
-                textcoords='axes fraction',va="center",ha="center",
-                bbox=style_neuron,fontsize=15)
-    #绘制该神经元的所有输入连接
-    if type(w)!=type(None):
-        pnn=w.shape[0]
-        for i in range(pnn):
-            style_connect = dict(arrowstyle="<-", color='black',lw=0.1+w[i])
-            ax.annotate('',xy=(xy[0]-0.4+0.04,0.2*(y_off_p+pnn-i-1)), 
-                         xycoords='axes fraction',
-                         xytext=(xy[0]-0.04,xy[1]),
-                         textcoords='axes fraction',
-                         va="center",ha="center",arrowprops=style_connect)
-
-#绘制神经网络
-def plot_network(model):
-    layers=model.layers
-    height=max(layers)
-    plt.figure(1,facecolor='white')
-    axprops=dict(xticks=[], yticks=[])
-    ax=plt.subplot(111,frameon=False,**axprops)
-    for i in range(len(model.weights)):
-        if i==0:
-            plot_layer(ax,model.weights[i],model.biases[i],i,height,first=True)
-        else:
-            plot_layer(ax,model.weights[i],model.biases[i],i,height,first=False)
-    plt.show()
+'''
 
 #绘制结构图
-plot_network(mlp0)
+mlp0.plot_network()
+
+#加载cifar10数据集
+cifar=CifarManager()
+#cifar.to_images(rewrite=True,chinese_label=True)
+start=time.clock()
+train_images,train_labels,test_images,test_labels=\
+    cifar.read_as_array(chinese_label=True)
+print('\ntime used for loading: %f'%(time.clock()-start))
+
+#MLP训练
+mlp0=nn.MultilayerPerceptron(
+        hidden_layers=(100,),activation='relu',softmax=False,
+        optimizer='nagd',batch_size=100,iter_max=100,learning_rate=0.01,
+        l2_alpha=0.0,dropout_p=0.0,early_stop=10)
+'''
+mlp0=nn.MultilayerPerceptron(
+        hidden_layers=(100,),activation='relu',softmax=True,
+        optimizer='nagd',batch_size=100,iter_max=100,learning_rate=0.01,
+        l2_alpha=0.0,dropout_p=0.0,early_stop=10)
+'''
+mlp0.fit(train_images/255,train_labels,test_images/255,test_labels,
+         monitor_cost=True,monitor_score=True,show_time=True)
+
+#耗时细节
+mlp0.time_cost
+
+#cost下降曲线
+mlp0.plot_cost_h()
+
+#score上升曲线
+mlp0.plot_score_h()
+
+#保存和加载
+mlp0.save('D:\\Model\\mlp0.txt')
+mlp0.load('D:\\Model\\mlp0.txt')
+mlp0=nn.load('D:\\Model\\mlp0.txt')
+
+#预测测试
+#a=mlp0.predict(test_images/255,return_a=True)
+pred=mlp0.predict(test_images/255,show_time=True)
+score=mlp0.assess(test_labels,pred)
+print('\nuser test score:%f'%score)
+
+#单图预测
+prob0=mlp0.predict(test_images[0]/255,return_a=True)
+pred0=mlp0.prob_to_label_(prob0,mlp0.classes)
+
+#平均图像
+mean_images=np.zeros((10,32,32,3))
+labels=['飞机','汽车','鸟','猫','鹿',
+        '狗','青蛙','马','船','卡车']
+fig=plt.figure(figsize=(8,6))
+for i in range(10):
+    axes=plt.subplot(3,4,i+1)
+    mean_image=train_images[train_labels==labels[i]].mean(axis=0)
+    mean_images[i]=mean_image
+    mean_image=Image.fromarray(np.uint8(mean_image))
+    axes.imshow(mean_image)
+    axes.set_xticks([])
+    axes.set_yticks([])
+plt.show()
+
+probs1=mlp0.predict(mean_images/255,return_a=True)
+preds1=mlp0.prob_to_label_(probs1,mlp0.classes)
 
 #回归
 #波士顿房价数据集
@@ -324,12 +323,13 @@ X_=dp.minmax_scaler(X,ref)
 test_X_=dp.minmax_scaler(test_X,ref)
 
 mlp1=nn.MultilayerPerceptron(
-        input_shape=(13,),output_shape=(1,),hidden_layers=(100,),
-        mode='r',activation=('relu','none'),cost='mse',optimizer='sgd',
-        batch_size=205,iter_max=100,learning_rate=0.01,
-        L2_alpha=0.0001,dropout_p=0.,early_stop=10,lr_atten_max=10,relu_a=0.0)
+        mode='r',hidden_layers=(100,),activation='relu',softmax=False,
+        optimizer='nagd',batch_size=205,iter_max=100,learning_rate=0.01,
+        l2_alpha=0.0001,dropout_p=0.,early_stop=10,relu_a=0.0)
 mlp1.fit(X_.values,y.values,test_X_.values,test_y.values,
          monitor_cost=True,monitor_score=True,show_time=True)
 
-plot_network(mlp1)
+#绘制结构图
+mlp1.plot_network()
+#fig,ax=mlp1.plot_network(return_fig=True)
 

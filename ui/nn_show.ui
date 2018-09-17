@@ -1,0 +1,1112 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>MainWindow</class>
+ <widget class="QMainWindow" name="MainWindow">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>860</width>
+    <height>750</height>
+   </rect>
+  </property>
+  <property name="windowTitle">
+   <string>神经网络演示</string>
+  </property>
+  <widget class="QWidget" name="centralWidget">
+   <layout class="QVBoxLayout" name="verticalLayout">
+    <item>
+     <widget class="QTabWidget" name="tabWidget">
+      <property name="styleSheet">
+       <string notr="true"/>
+      </property>
+      <property name="currentIndex">
+       <number>1</number>
+      </property>
+      <property name="iconSize">
+       <size>
+        <width>20</width>
+        <height>20</height>
+       </size>
+      </property>
+      <widget class="QWidget" name="tab1">
+       <attribute name="title">
+        <string>简单分类</string>
+       </attribute>
+       <layout class="QGridLayout" name="gridLayout">
+        <item row="0" column="0">
+         <widget class="QGroupBox" name="groupBox_visualization1">
+          <property name="acceptDrops">
+           <bool>false</bool>
+          </property>
+          <property name="styleSheet">
+           <string notr="true"/>
+          </property>
+          <property name="title">
+           <string>结构与作用</string>
+          </property>
+          <layout class="QGridLayout" name="gridLayout_8">
+           <item row="0" column="0">
+            <widget class="QTabWidget" name="tabWidget_3">
+             <property name="sizePolicy">
+              <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+               <horstretch>0</horstretch>
+               <verstretch>0</verstretch>
+              </sizepolicy>
+             </property>
+             <property name="currentIndex">
+              <number>0</number>
+             </property>
+             <widget class="QWidget" name="tab_5">
+              <attribute name="title">
+               <string>网络结构图</string>
+              </attribute>
+              <layout class="QGridLayout" name="gridLayout_12">
+               <item row="0" column="0">
+                <widget class="QGraphicsView" name="graphicsView_structure1">
+                 <property name="sizePolicy">
+                  <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+                   <horstretch>0</horstretch>
+                   <verstretch>0</verstretch>
+                  </sizepolicy>
+                 </property>
+                 <property name="sizeAdjustPolicy">
+                  <enum>QAbstractScrollArea::AdjustToContents</enum>
+                 </property>
+                </widget>
+               </item>
+               <item row="1" column="0">
+                <widget class="QPushButton" name="pushButton_structure1">
+                 <property name="sizePolicy">
+                  <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
+                   <horstretch>0</horstretch>
+                   <verstretch>0</verstretch>
+                  </sizepolicy>
+                 </property>
+                 <property name="text">
+                  <string>绘制</string>
+                 </property>
+                </widget>
+               </item>
+              </layout>
+             </widget>
+             <widget class="QWidget" name="tab_7">
+              <attribute name="title">
+               <string>神经元作用</string>
+              </attribute>
+              <layout class="QGridLayout" name="gridLayout_13">
+               <item row="0" column="0" colspan="3">
+                <widget class="QScrollArea" name="scrollArea_neurons_action1">
+                 <property name="sizePolicy">
+                  <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+                   <horstretch>0</horstretch>
+                   <verstretch>0</verstretch>
+                  </sizepolicy>
+                 </property>
+                 <property name="widgetResizable">
+                  <bool>true</bool>
+                 </property>
+                 <widget class="QWidget" name="scrollAreaWidgetContents">
+                  <property name="geometry">
+                   <rect>
+                    <x>0</x>
+                    <y>0</y>
+                    <width>55</width>
+                    <height>16</height>
+                   </rect>
+                  </property>
+                 </widget>
+                </widget>
+               </item>
+               <item row="1" column="0">
+                <widget class="QComboBox" name="comboBox_layer1"/>
+               </item>
+               <item row="1" column="1">
+                <widget class="QComboBox" name="comboBox_neurons1"/>
+               </item>
+               <item row="1" column="2">
+                <widget class="QPushButton" name="pushButton_neurons_action1">
+                 <property name="sizePolicy">
+                  <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
+                   <horstretch>0</horstretch>
+                   <verstretch>0</verstretch>
+                  </sizepolicy>
+                 </property>
+                 <property name="text">
+                  <string>绘制</string>
+                 </property>
+                </widget>
+               </item>
+              </layout>
+             </widget>
+            </widget>
+           </item>
+          </layout>
+         </widget>
+        </item>
+        <item row="0" column="1">
+         <widget class="QGroupBox" name="groupBox_fitting_result1">
+          <property name="sizePolicy">
+           <sizepolicy hsizetype="Ignored" vsizetype="Ignored">
+            <horstretch>0</horstretch>
+            <verstretch>0</verstretch>
+           </sizepolicy>
+          </property>
+          <property name="title">
+           <string>拟合结果</string>
+          </property>
+          <layout class="QGridLayout" name="gridLayout_7"/>
+         </widget>
+        </item>
+        <item row="1" column="0">
+         <widget class="QGroupBox" name="groupBox_monitor1">
+          <property name="title">
+           <string>进度监控</string>
+          </property>
+          <layout class="QVBoxLayout" name="verticalLayout_3">
+           <item>
+            <widget class="QTabWidget" name="tabWidget_monitor1">
+             <property name="sizePolicy">
+              <sizepolicy hsizetype="Preferred" vsizetype="Ignored">
+               <horstretch>0</horstretch>
+               <verstretch>0</verstretch>
+              </sizepolicy>
+             </property>
+             <property name="currentIndex">
+              <number>0</number>
+             </property>
+             <widget class="QWidget" name="tab_8">
+              <attribute name="title">
+               <string>消息框</string>
+              </attribute>
+              <layout class="QGridLayout" name="gridLayout_14">
+               <item row="0" column="0">
+                <widget class="QTextBrowser" name="textBrowser_monitor1">
+                 <property name="sizePolicy">
+                  <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+                   <horstretch>0</horstretch>
+                   <verstretch>0</verstretch>
+                  </sizepolicy>
+                 </property>
+                </widget>
+               </item>
+              </layout>
+             </widget>
+            </widget>
+           </item>
+          </layout>
+         </widget>
+        </item>
+        <item row="1" column="1">
+         <widget class="QGroupBox" name="groupBox_train_config1">
+          <property name="title">
+           <string>训练配置</string>
+          </property>
+          <layout class="QGridLayout" name="gridLayout_2">
+           <item row="1" column="0">
+            <widget class="QLabel" name="label_3">
+             <property name="text">
+              <string>隐含层</string>
+             </property>
+             <property name="alignment">
+              <set>Qt::AlignCenter</set>
+             </property>
+            </widget>
+           </item>
+           <item row="2" column="3">
+            <widget class="QPushButton" name="pushButton_remove_layer1">
+             <property name="text">
+              <string>移除层</string>
+             </property>
+            </widget>
+           </item>
+           <item row="0" column="3">
+            <widget class="QDoubleSpinBox" name="doubleSpinBox_noise1">
+             <property name="maximum">
+              <double>1.000000000000000</double>
+             </property>
+             <property name="singleStep">
+              <double>0.100000000000000</double>
+             </property>
+             <property name="value">
+              <double>0.300000000000000</double>
+             </property>
+            </widget>
+           </item>
+           <item row="1" column="1">
+            <widget class="QTextBrowser" name="textBrowser_hidden_layers1">
+             <property name="sizePolicy">
+              <sizepolicy hsizetype="Ignored" vsizetype="Ignored">
+               <horstretch>0</horstretch>
+               <verstretch>0</verstretch>
+              </sizepolicy>
+             </property>
+            </widget>
+           </item>
+           <item row="2" column="2">
+            <widget class="QPushButton" name="pushButton_add_layer1">
+             <property name="text">
+              <string>添加层</string>
+             </property>
+            </widget>
+           </item>
+           <item row="2" column="1">
+            <widget class="QSpinBox" name="spinBox_neurons_n1">
+             <property name="alignment">
+              <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter</set>
+             </property>
+             <property name="minimum">
+              <number>1</number>
+             </property>
+             <property name="maximum">
+              <number>1000</number>
+             </property>
+             <property name="singleStep">
+              <number>10</number>
+             </property>
+             <property name="value">
+              <number>100</number>
+             </property>
+            </widget>
+           </item>
+           <item row="4" column="1">
+            <widget class="QDoubleSpinBox" name="doubleSpinBox_learning_rate1">
+             <property name="decimals">
+              <number>4</number>
+             </property>
+             <property name="minimum">
+              <double>0.000100000000000</double>
+             </property>
+             <property name="maximum">
+              <double>10.000000000000000</double>
+             </property>
+             <property name="singleStep">
+              <double>0.010000000000000</double>
+             </property>
+             <property name="value">
+              <double>0.100000000000000</double>
+             </property>
+            </widget>
+           </item>
+           <item row="0" column="0">
+            <widget class="QLabel" name="label">
+             <property name="text">
+              <string>数据集类型</string>
+             </property>
+             <property name="alignment">
+              <set>Qt::AlignCenter</set>
+             </property>
+            </widget>
+           </item>
+           <item row="1" column="2">
+            <widget class="QLabel" name="label_4">
+             <property name="text">
+              <string>隐含层激活</string>
+             </property>
+             <property name="alignment">
+              <set>Qt::AlignCenter</set>
+             </property>
+            </widget>
+           </item>
+           <item row="2" column="0">
+            <widget class="QLabel" name="label_5">
+             <property name="text">
+              <string>神经元数量</string>
+             </property>
+             <property name="alignment">
+              <set>Qt::AlignCenter</set>
+             </property>
+            </widget>
+           </item>
+           <item row="0" column="2">
+            <widget class="QLabel" name="label_2">
+             <property name="text">
+              <string>噪声比</string>
+             </property>
+             <property name="alignment">
+              <set>Qt::AlignCenter</set>
+             </property>
+             <property name="margin">
+              <number>0</number>
+             </property>
+            </widget>
+           </item>
+           <item row="0" column="1">
+            <widget class="QComboBox" name="comboBox_dataset_type1">
+             <property name="sizePolicy">
+              <sizepolicy hsizetype="Ignored" vsizetype="Fixed">
+               <horstretch>0</horstretch>
+               <verstretch>0</verstretch>
+              </sizepolicy>
+             </property>
+             <item>
+              <property name="text">
+               <string>圆形</string>
+              </property>
+             </item>
+             <item>
+              <property name="text">
+               <string>月牙形</string>
+              </property>
+             </item>
+            </widget>
+           </item>
+           <item row="1" column="3">
+            <widget class="QComboBox" name="comboBox_activation1">
+             <item>
+              <property name="text">
+               <string>relu</string>
+              </property>
+             </item>
+             <item>
+              <property name="text">
+               <string>tanh</string>
+              </property>
+             </item>
+             <item>
+              <property name="text">
+               <string>sigmoid</string>
+              </property>
+             </item>
+            </widget>
+           </item>
+           <item row="4" column="2">
+            <widget class="QLabel" name="label_7">
+             <property name="text">
+              <string>迭代次数</string>
+             </property>
+             <property name="alignment">
+              <set>Qt::AlignCenter</set>
+             </property>
+            </widget>
+           </item>
+           <item row="4" column="3">
+            <widget class="QSpinBox" name="spinBox_iter_max1">
+             <property name="minimum">
+              <number>1</number>
+             </property>
+             <property name="maximum">
+              <number>1000</number>
+             </property>
+             <property name="singleStep">
+              <number>10</number>
+             </property>
+             <property name="value">
+              <number>50</number>
+             </property>
+            </widget>
+           </item>
+           <item row="4" column="0">
+            <widget class="QLabel" name="label_6">
+             <property name="text">
+              <string>学习率</string>
+             </property>
+             <property name="alignment">
+              <set>Qt::AlignCenter</set>
+             </property>
+            </widget>
+           </item>
+           <item row="6" column="1">
+            <widget class="QPushButton" name="pushButton_train1">
+             <property name="styleSheet">
+              <string notr="true">background-color: rgb(224,255,255);</string>
+             </property>
+             <property name="text">
+              <string>训练</string>
+             </property>
+            </widget>
+           </item>
+           <item row="6" column="2">
+            <widget class="QPushButton" name="pushButton_reset1">
+             <property name="styleSheet">
+              <string notr="true">background-color: rgb(224,255,255);</string>
+             </property>
+             <property name="text">
+              <string>重置</string>
+             </property>
+            </widget>
+           </item>
+          </layout>
+         </widget>
+        </item>
+       </layout>
+      </widget>
+      <widget class="QWidget" name="tab2">
+       <attribute name="title">
+        <string>图像识别</string>
+       </attribute>
+       <layout class="QGridLayout" name="gridLayout_3">
+        <item row="2" column="6">
+         <widget class="QGroupBox" name="groupBox_5">
+          <property name="sizePolicy">
+           <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+            <horstretch>0</horstretch>
+            <verstretch>0</verstretch>
+           </sizepolicy>
+          </property>
+          <property name="title">
+           <string>输出</string>
+          </property>
+          <layout class="QGridLayout" name="gridLayout_5" columnstretch="0">
+           <item row="6" column="0">
+            <widget class="QGroupBox" name="groupBox">
+             <property name="title">
+              <string>评估</string>
+             </property>
+             <layout class="QGridLayout" name="gridLayout_9">
+              <item row="0" column="0">
+               <widget class="QTextBrowser" name="textBrowser_check2">
+                <property name="sizePolicy">
+                 <sizepolicy hsizetype="Ignored" vsizetype="Ignored">
+                  <horstretch>0</horstretch>
+                  <verstretch>0</verstretch>
+                 </sizepolicy>
+                </property>
+               </widget>
+              </item>
+              <item row="0" column="1" colspan="2">
+               <widget class="QTextBrowser" name="textBrowser_accuracy2">
+                <property name="sizePolicy">
+                 <sizepolicy hsizetype="Ignored" vsizetype="Ignored">
+                  <horstretch>0</horstretch>
+                  <verstretch>0</verstretch>
+                 </sizepolicy>
+                </property>
+               </widget>
+              </item>
+             </layout>
+            </widget>
+           </item>
+           <item row="3" column="0">
+            <widget class="QGroupBox" name="groupBox_2">
+             <property name="title">
+              <string>分类</string>
+             </property>
+             <layout class="QGridLayout" name="gridLayout_10">
+              <item row="0" column="0">
+               <widget class="QTextBrowser" name="textBrowser_class2">
+                <property name="sizePolicy">
+                 <sizepolicy hsizetype="Ignored" vsizetype="Ignored">
+                  <horstretch>0</horstretch>
+                  <verstretch>0</verstretch>
+                 </sizepolicy>
+                </property>
+               </widget>
+              </item>
+              <item row="0" column="1" colspan="2">
+               <widget class="QTextBrowser" name="textBrowser_class_prob2">
+                <property name="sizePolicy">
+                 <sizepolicy hsizetype="Ignored" vsizetype="Ignored">
+                  <horstretch>0</horstretch>
+                  <verstretch>0</verstretch>
+                 </sizepolicy>
+                </property>
+               </widget>
+              </item>
+             </layout>
+            </widget>
+           </item>
+          </layout>
+         </widget>
+        </item>
+        <item row="3" column="6">
+         <widget class="QGroupBox" name="groupBox_train_config2">
+          <property name="sizePolicy">
+           <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+            <horstretch>0</horstretch>
+            <verstretch>0</verstretch>
+           </sizepolicy>
+          </property>
+          <property name="title">
+           <string>训练配置</string>
+          </property>
+          <layout class="QGridLayout" name="gridLayout_6">
+           <item row="6" column="0">
+            <widget class="QLabel" name="label_16">
+             <property name="text">
+              <string>L2正则系数</string>
+             </property>
+             <property name="alignment">
+              <set>Qt::AlignCenter</set>
+             </property>
+            </widget>
+           </item>
+           <item row="4" column="0">
+            <widget class="QLabel" name="label_15">
+             <property name="text">
+              <string>学习率</string>
+             </property>
+             <property name="alignment">
+              <set>Qt::AlignCenter</set>
+             </property>
+            </widget>
+           </item>
+           <item row="2" column="3">
+            <widget class="QPushButton" name="pushButton_remove_layer2">
+             <property name="text">
+              <string>移除层</string>
+             </property>
+            </widget>
+           </item>
+           <item row="2" column="0">
+            <widget class="QLabel" name="label_12">
+             <property name="text">
+              <string>神经元数量</string>
+             </property>
+             <property name="alignment">
+              <set>Qt::AlignCenter</set>
+             </property>
+            </widget>
+           </item>
+           <item row="6" column="2">
+            <widget class="QLabel" name="label_17">
+             <property name="text">
+              <string>神经元弃权</string>
+             </property>
+             <property name="alignment">
+              <set>Qt::AlignCenter</set>
+             </property>
+            </widget>
+           </item>
+           <item row="6" column="1">
+            <widget class="QDoubleSpinBox" name="doubleSpinBox_l2_alpha2">
+             <property name="sizePolicy">
+              <sizepolicy hsizetype="Ignored" vsizetype="Fixed">
+               <horstretch>0</horstretch>
+               <verstretch>0</verstretch>
+              </sizepolicy>
+             </property>
+             <property name="decimals">
+              <number>4</number>
+             </property>
+             <property name="singleStep">
+              <double>0.000100000000000</double>
+             </property>
+             <property name="value">
+              <double>0.000000000000000</double>
+             </property>
+            </widget>
+           </item>
+           <item row="5" column="3">
+            <widget class="QSpinBox" name="spinBox_batch_size2">
+             <property name="minimum">
+              <number>1</number>
+             </property>
+             <property name="maximum">
+              <number>60000</number>
+             </property>
+             <property name="singleStep">
+              <number>10</number>
+             </property>
+             <property name="value">
+              <number>100</number>
+             </property>
+            </widget>
+           </item>
+           <item row="2" column="2">
+            <widget class="QPushButton" name="pushButton_add_layer2">
+             <property name="text">
+              <string>添加层</string>
+             </property>
+            </widget>
+           </item>
+           <item row="7" column="2">
+            <widget class="QPushButton" name="pushButton_reset2">
+             <property name="styleSheet">
+              <string notr="true">background-color: rgb(224,255,255);</string>
+             </property>
+             <property name="text">
+              <string>重置</string>
+             </property>
+            </widget>
+           </item>
+           <item row="1" column="2">
+            <widget class="QLabel" name="label_11">
+             <property name="text">
+              <string>隐含层激活</string>
+             </property>
+             <property name="alignment">
+              <set>Qt::AlignCenter</set>
+             </property>
+            </widget>
+           </item>
+           <item row="6" column="3">
+            <widget class="QComboBox" name="comboBox_dropout2">
+             <item>
+              <property name="text">
+               <string>关闭</string>
+              </property>
+             </item>
+             <item>
+              <property name="text">
+               <string>开启</string>
+              </property>
+             </item>
+            </widget>
+           </item>
+           <item row="5" column="0">
+            <widget class="QLabel" name="label_10">
+             <property name="text">
+              <string>优化器</string>
+             </property>
+             <property name="alignment">
+              <set>Qt::AlignCenter</set>
+             </property>
+            </widget>
+           </item>
+           <item row="7" column="1">
+            <widget class="QPushButton" name="pushButton_train2">
+             <property name="sizePolicy">
+              <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
+               <horstretch>0</horstretch>
+               <verstretch>0</verstretch>
+              </sizepolicy>
+             </property>
+             <property name="styleSheet">
+              <string notr="true">background-color: rgb(224,255,255);</string>
+             </property>
+             <property name="text">
+              <string>训练</string>
+             </property>
+            </widget>
+           </item>
+           <item row="1" column="3">
+            <widget class="QComboBox" name="comboBox_activation2">
+             <item>
+              <property name="text">
+               <string>relu</string>
+              </property>
+             </item>
+             <item>
+              <property name="text">
+               <string>tanh</string>
+              </property>
+             </item>
+             <item>
+              <property name="text">
+               <string>sigmoid</string>
+              </property>
+             </item>
+            </widget>
+           </item>
+           <item row="4" column="3">
+            <widget class="QSpinBox" name="spinBox_iter_max2">
+             <property name="minimum">
+              <number>1</number>
+             </property>
+             <property name="maximum">
+              <number>1000</number>
+             </property>
+             <property name="singleStep">
+              <number>10</number>
+             </property>
+             <property name="value">
+              <number>10</number>
+             </property>
+            </widget>
+           </item>
+           <item row="4" column="2">
+            <widget class="QLabel" name="label_14">
+             <property name="text">
+              <string>迭代次数</string>
+             </property>
+             <property name="alignment">
+              <set>Qt::AlignCenter</set>
+             </property>
+            </widget>
+           </item>
+           <item row="5" column="2">
+            <widget class="QLabel" name="label_13">
+             <property name="text">
+              <string>批次大小</string>
+             </property>
+             <property name="alignment">
+              <set>Qt::AlignCenter</set>
+             </property>
+            </widget>
+           </item>
+           <item row="1" column="0">
+            <widget class="QLabel" name="label_9">
+             <property name="text">
+              <string>隐含层</string>
+             </property>
+             <property name="alignment">
+              <set>Qt::AlignCenter</set>
+             </property>
+            </widget>
+           </item>
+           <item row="4" column="1">
+            <widget class="QDoubleSpinBox" name="doubleSpinBox_learning_rate2">
+             <property name="sizePolicy">
+              <sizepolicy hsizetype="Ignored" vsizetype="Fixed">
+               <horstretch>0</horstretch>
+               <verstretch>0</verstretch>
+              </sizepolicy>
+             </property>
+             <property name="decimals">
+              <number>4</number>
+             </property>
+             <property name="minimum">
+              <double>0.000100000000000</double>
+             </property>
+             <property name="maximum">
+              <double>10.000000000000000</double>
+             </property>
+             <property name="singleStep">
+              <double>0.010000000000000</double>
+             </property>
+             <property name="value">
+              <double>0.100000000000000</double>
+             </property>
+            </widget>
+           </item>
+           <item row="2" column="1">
+            <widget class="QSpinBox" name="spinBox_neurons_n2">
+             <property name="sizePolicy">
+              <sizepolicy hsizetype="Ignored" vsizetype="Fixed">
+               <horstretch>0</horstretch>
+               <verstretch>0</verstretch>
+              </sizepolicy>
+             </property>
+             <property name="alignment">
+              <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter</set>
+             </property>
+             <property name="minimum">
+              <number>1</number>
+             </property>
+             <property name="maximum">
+              <number>1000</number>
+             </property>
+             <property name="singleStep">
+              <number>10</number>
+             </property>
+             <property name="value">
+              <number>100</number>
+             </property>
+            </widget>
+           </item>
+           <item row="1" column="1">
+            <widget class="QTextBrowser" name="textBrowser_hidden_layers2">
+             <property name="sizePolicy">
+              <sizepolicy hsizetype="Ignored" vsizetype="Ignored">
+               <horstretch>0</horstretch>
+               <verstretch>0</verstretch>
+              </sizepolicy>
+             </property>
+             <property name="searchPaths">
+              <stringlist/>
+             </property>
+            </widget>
+           </item>
+           <item row="5" column="1">
+            <widget class="QComboBox" name="comboBox_optimizer2">
+             <property name="sizePolicy">
+              <sizepolicy hsizetype="Ignored" vsizetype="Fixed">
+               <horstretch>0</horstretch>
+               <verstretch>0</verstretch>
+              </sizepolicy>
+             </property>
+             <item>
+              <property name="text">
+               <string>Nesterov</string>
+              </property>
+             </item>
+             <item>
+              <property name="text">
+               <string>SGD</string>
+              </property>
+             </item>
+             <item>
+              <property name="text">
+               <string>Momentum</string>
+              </property>
+             </item>
+             <item>
+              <property name="text">
+               <string>Adam</string>
+              </property>
+             </item>
+            </widget>
+           </item>
+           <item row="3" column="0">
+            <widget class="QLabel" name="label_8">
+             <property name="text">
+              <string>代价函数</string>
+             </property>
+             <property name="alignment">
+              <set>Qt::AlignCenter</set>
+             </property>
+            </widget>
+           </item>
+           <item row="3" column="1">
+            <widget class="QComboBox" name="comboBox_cost2">
+             <item>
+              <property name="text">
+               <string>交叉熵</string>
+              </property>
+             </item>
+             <item>
+              <property name="text">
+               <string>对数似然</string>
+              </property>
+             </item>
+            </widget>
+           </item>
+           <item row="3" column="2">
+            <widget class="QLabel" name="label_18">
+             <property name="text">
+              <string>输出层激活</string>
+             </property>
+             <property name="alignment">
+              <set>Qt::AlignCenter</set>
+             </property>
+            </widget>
+           </item>
+           <item row="3" column="3">
+            <widget class="QComboBox" name="comboBox_output_activation2">
+             <item>
+              <property name="text">
+               <string>sigmoid</string>
+              </property>
+             </item>
+             <item>
+              <property name="text">
+               <string>softmax</string>
+              </property>
+             </item>
+            </widget>
+           </item>
+          </layout>
+         </widget>
+        </item>
+        <item row="2" column="4">
+         <widget class="QGroupBox" name="groupBox_input2">
+          <property name="title">
+           <string>输入</string>
+          </property>
+          <layout class="QGridLayout" name="gridLayout_4" columnstretch="0,0,0,0,0,0">
+           <item row="4" column="5">
+            <widget class="QPushButton" name="pushButton_test2">
+             <property name="sizePolicy">
+              <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
+               <horstretch>0</horstretch>
+               <verstretch>0</verstretch>
+              </sizepolicy>
+             </property>
+             <property name="styleSheet">
+              <string notr="true">background-color: rgb(224,255,255);</string>
+             </property>
+             <property name="text">
+              <string>测试集验证</string>
+             </property>
+            </widget>
+           </item>
+           <item row="0" column="3">
+            <widget class="QPushButton" name="pushButton_dataset_path2">
+             <property name="sizePolicy">
+              <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
+               <horstretch>0</horstretch>
+               <verstretch>0</verstretch>
+              </sizepolicy>
+             </property>
+             <property name="text">
+              <string>路径设置</string>
+             </property>
+            </widget>
+           </item>
+           <item row="0" column="2">
+            <widget class="QComboBox" name="comboBox_dataset_type2">
+             <item>
+              <property name="text">
+               <string>mnist</string>
+              </property>
+             </item>
+             <item>
+              <property name="text">
+               <string>cifar10</string>
+              </property>
+             </item>
+            </widget>
+           </item>
+           <item row="0" column="5">
+            <widget class="QPushButton" name="pushButton_export_images2">
+             <property name="sizePolicy">
+              <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
+               <horstretch>0</horstretch>
+               <verstretch>0</verstretch>
+              </sizepolicy>
+             </property>
+             <property name="text">
+              <string>导出图片</string>
+             </property>
+            </widget>
+           </item>
+           <item row="5" column="5">
+            <widget class="QPushButton" name="pushButton_select_image2">
+             <property name="sizePolicy">
+              <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
+               <horstretch>0</horstretch>
+               <verstretch>0</verstretch>
+              </sizepolicy>
+             </property>
+             <property name="text">
+              <string>选择图片</string>
+             </property>
+            </widget>
+           </item>
+           <item row="6" column="5">
+            <widget class="QPushButton" name="pushButton_draw_image2">
+             <property name="sizePolicy">
+              <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
+               <horstretch>0</horstretch>
+               <verstretch>0</verstretch>
+              </sizepolicy>
+             </property>
+             <property name="text">
+              <string>绘制图片</string>
+             </property>
+            </widget>
+           </item>
+           <item row="7" column="5">
+            <widget class="QPushButton" name="pushButton_test_one2">
+             <property name="sizePolicy">
+              <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
+               <horstretch>0</horstretch>
+               <verstretch>0</verstretch>
+              </sizepolicy>
+             </property>
+             <property name="autoFillBackground">
+              <bool>false</bool>
+             </property>
+             <property name="styleSheet">
+              <string notr="true">background-color: rgb(224,255,255);
+border-color:rgb(173, 173, 173);</string>
+             </property>
+             <property name="text">
+              <string>单图验证</string>
+             </property>
+            </widget>
+           </item>
+           <item row="0" column="1">
+            <widget class="QLabel" name="label_19">
+             <property name="sizePolicy">
+              <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
+               <horstretch>0</horstretch>
+               <verstretch>0</verstretch>
+              </sizepolicy>
+             </property>
+             <property name="text">
+              <string>数据集类型</string>
+             </property>
+             <property name="alignment">
+              <set>Qt::AlignCenter</set>
+             </property>
+            </widget>
+           </item>
+           <item row="1" column="1" rowspan="7" colspan="3">
+            <widget class="QLabel" name="label_image2">
+             <property name="sizePolicy">
+              <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+               <horstretch>0</horstretch>
+               <verstretch>0</verstretch>
+              </sizepolicy>
+             </property>
+             <property name="styleSheet">
+              <string notr="true">backgroud-color: rgb(255, 255, 255);
+border:1px solid rgb(122, 122, 122);</string>
+             </property>
+             <property name="text">
+              <string/>
+             </property>
+            </widget>
+           </item>
+           <item row="1" column="5" rowspan="3">
+            <widget class="QTextBrowser" name="textBrowser_dataset_info2">
+             <property name="sizePolicy">
+              <sizepolicy hsizetype="Preferred" vsizetype="Ignored">
+               <horstretch>0</horstretch>
+               <verstretch>0</verstretch>
+              </sizepolicy>
+             </property>
+            </widget>
+           </item>
+          </layout>
+         </widget>
+        </item>
+        <item row="3" column="4">
+         <widget class="QGroupBox" name="groupBox_monitor2">
+          <property name="title">
+           <string>进度监控</string>
+          </property>
+          <layout class="QVBoxLayout" name="verticalLayout_2">
+           <item>
+            <widget class="QTabWidget" name="tabWidget_monitor2">
+             <property name="sizePolicy">
+              <sizepolicy hsizetype="Preferred" vsizetype="Ignored">
+               <horstretch>0</horstretch>
+               <verstretch>0</verstretch>
+              </sizepolicy>
+             </property>
+             <property name="currentIndex">
+              <number>0</number>
+             </property>
+             <widget class="QWidget" name="tab_3">
+              <attribute name="title">
+               <string>消息框</string>
+              </attribute>
+              <layout class="QGridLayout" name="gridLayout_11">
+               <item row="0" column="0">
+                <widget class="QTextBrowser" name="textBrowser_monitor2">
+                 <property name="sizePolicy">
+                  <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+                   <horstretch>0</horstretch>
+                   <verstretch>0</verstretch>
+                  </sizepolicy>
+                 </property>
+                </widget>
+               </item>
+              </layout>
+             </widget>
+            </widget>
+           </item>
+          </layout>
+         </widget>
+        </item>
+       </layout>
+      </widget>
+     </widget>
+    </item>
+   </layout>
+  </widget>
+  <widget class="QStatusBar" name="statusBar"/>
+  <action name="action">
+   <property name="text">
+    <string>圆形</string>
+   </property>
+  </action>
+  <action name="action_2">
+   <property name="text">
+    <string>月牙形
+</string>
+   </property>
+  </action>
+  <action name="actionmnist">
+   <property name="text">
+    <string>mnist</string>
+   </property>
+  </action>
+  <action name="actioncifar10">
+   <property name="text">
+    <string>cifar10</string>
+   </property>
+  </action>
+  <action name="actioncifar100">
+   <property name="text">
+    <string>cifar100</string>
+   </property>
+  </action>
+ </widget>
+ <layoutdefault spacing="6" margin="11"/>
+ <resources/>
+ <connections/>
+</ui>
